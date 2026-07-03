@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tylostek — Mission Control</title>
+
+<!-- ─── Google Fonts: Inter Tight + JetBrains Mono ─── -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   CSS VARIABLES — Color palette
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --bg:            #15151F;
+
+  --violet:        #8B5CF6;
+  --violet-glow:   #A78BFA;
+  --cyan:          #7DD3FC;
+  --mint:          #5EE2B5;
+  --amber:         #F5B544;
+  --red:           #F26D6D;
+  --pink:          #F472B6;
+  --gold:          #FBBF24;
+  --magenta:       #E879F9;
+
+  --text:          #F4F4F8;
+  --muted:         #8A8A9B;
+
+  --glass-bg:      rgba(31, 31, 43, 0.55);
+  --glass-border:  rgba(255, 255, 255, 0.06);
+  --glass-blur:    24px;
+
+  --radius:        16px;
+  --radius-sm:     10px;
+  --radius-pill:   100px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESET
+   ═══════════════════════════════════════════════════════════════════════════ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter Tight', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BACKGROUND LAYERS — orbs + dot grid (never crisp)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Violet orb — top-left, large, soft */
+.bg-orb-violet {
+  position: fixed;
+  top: -200px;
+  left: -200px;
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.28) 0%, rgba(139, 92, 246, 0) 70%);
+  filter: blur(80px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Cyan orb — mid-right, large, soft */
+.bg-orb-cyan {
+  position: fixed;
+  top: 30%;
+  right: -250px;
+  width: 800px;
+  height: 800px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(125, 211, 252, 0.18) 0%, rgba(125, 211, 252, 0) 70%);
+  filter: blur(90px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Dot grid overlay — very low opacity, ~24px spacing */
+.bg-dotgrid {
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 24px 24px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYOUT WRAPPER
+   ═══════════════════════════════════════════════════════════════════════════ */
+.app {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NAV — fixed top bar
+   ═══════════════════════════════════════════════════════════════════════════ */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  background: rgba(21, 21, 31, 0.65);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-bottom: 1px solid var(--glass-border);
+  z-index: 100;
+}
+
+/* ─── Brand mark ─── */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: conic-gradient(from 180deg, var(--violet), var(--cyan), var(--violet));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.brand-mark::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--bg);
+}
+
+.brand-mark::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 8px var(--mint), 0 0 16px rgba(94, 226, 181, 0.5);
+  animation: pulse-dot 2.5s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.7); }
+}
+
+.brand-text {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.brand-name {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.brand-slash {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.brand-version {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 5px;
+  padding: 2px 7px;
+  margin-left: 4px;
+}
+
+/* ─── Tab pill (center) ─── */
+.tabs {
+  display: flex;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+}
+
+.tab {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 7px 18px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.25s, background 0.25s;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab.active {
+  background: #ffffff;
+  color: var(--bg);
+  font-weight: 600;
+}
+
+/* ─── Status pill (right) ─── */
+.status-cluster {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  padding: 7px 16px;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 6px var(--mint);
+  animation: pulse-dot 2.5s ease-in-out infinite;
+}
+
+.status-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.clock {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  min-width: 68px;
+  text-align: right;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MAIN — tab panels
+   ═══════════════════════════════════════════════════════════════════════════ */
+.main {
+  flex: 1;
+  padding: 88px 28px 32px;
+}
+
+.tab-panel {
+  display: none;
+  animation: fade-in 0.35s ease;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════ Violet dividers between panels (shared glass styling) ═══════════════════════════════════════════════════════════ */
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+}
+
+/* ─── Panel label (shared) ─── */
+.panel-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+}
+
+/* ─── Big number (shared) ─── */
+.big-number {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1;
+  color: var(--text);
+}
+
+.big-number .unit {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   OVERVIEW TAB
+   ═══════════════════════════════════════════════════════════════════════════ */
+#overview {
+  display: none;
+}
+#overview.active {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+
+/* Stat tiles — top row */
+.ov-stat {
+  grid-column: span 3;
+  padding: 20px;
+  min-height: 110px;
+}
+
+/* Health bar panel */
+.ov-health {
+  grid-column: span 6;
+  padding: 20px;
+}
+
+/* Agent activity panel */
+.ov-agents {
+  grid-column: span 6;
+  padding: 20px;
+}
+
+/* Session table panel */
+.ov-sessions {
+  grid-column: span 8;
+  padding: 20px;
+}
+
+/* Side column */
+.ov-side {
+  grid-column: span 4;
+  padding: 20px;
+}
+
+/* ─── Placeholder skeleton lines ─── */
+.skeleton-line {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  margin-bottom: 8px;
+}
+
+.skeleton-line.short { width: 60%; }
+.skeleton-line.medium { width: 80%; }
+.skeleton-line.full { width: 100%; }
+
+/* ─── Health skeleton bars ─── */
+.health-row {
+  margin-bottom: 14px;
+}
+
+.health-row:last-child { margin-bottom: 0; }
+
+.health-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.health-label-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.health-label-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.health-bar {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.health-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  width: 0%;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AGENTS TAB
+   ═══════════════════════════════════════════════════════════════════════════ */
+#agents {
+  display: none;
+}
+#agents.active {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+
+.ag-summary {
+  grid-column: span 12;
+  padding: 20px;
+}
+
+.ag-card {
+  grid-column: span 3;
+  padding: 20px;
+  min-height: 200px;
+}
+
+.ag-activity {
+  grid-column: span 8;
+  padding: 20px;
+}
+
+.ag-side {
+  grid-column: span 4;
+  padding: 20px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TASKS TAB
+   ═══════════════════════════════════════════════════ funnel + board ═══════════════════════════════════════════════════════════════════════════ */
+#tasks {
+  display: none;
+}
+#tasks.active {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+
+.tk-funnel {
+  grid-column: span 4;
+  padding: 20px;
+}
+
+.tk-board {
+  grid-column: span 8;
+  padding: 20px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCHEDULE TAB
+   ═══════════════════════════════════════════════════════════════════════════ */
+#schedule {
+  display: none;
+}
+#schedule.active {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+
+.sc-timeline {
+  grid-column: span 8;
+  padding: 20px;
+}
+
+.sc-side {
+  grid-column: span 4;
+  padding: 20px;
+}
+
+/* ═════════════════════════════════════════
+   CONTENT TAB — placeholder for Prompt 24
+   ═══════════════════════════════════════════════════════════════════════════ */
+#content {
+  display: none;
+}
+#content.active {
+  display: block;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 1100px) {
+  .ov-stat       { grid-column: span 6; }
+  .ov-health     { grid-column: span 12; }
+  .ov-agents     { grid-column: span 12; }
+  .ov-sessions   { grid-column: span 12; }
+  .ov-side       { grid-column: span 12; }
+
+  .ag-card       { grid-column: span 6; }
+  .ag-activity   { grid-column: span 12; }
+  .ag-side       { grid-column: span 12; }
+
+  .tk-funnel     { grid-column: span 12; }
+  .tk-board      { grid-column: span 12; }
+
+  .sc-timeline   { grid-column: span 12; }
+  .sc-side       { grid-column: span 12; }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 0 14px;
+  }
+
+  .tabs {
+    display: none;
+  }
+
+  .status-text {
+    display: none;
+  }
+
+  .main {
+    padding: 80px 14px 24px;
+  }
+
+  .ov-stat       { grid-column: span 12; }
+  .ag-card       { grid-column: span 12; }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── Background layers ─── -->
+<div class="bg-orb-violet"></div>
+<div class="bg-orb-cyan"></div>
+<div class="bg-dotgrid"></div>
+
+<!-- ─── App ─── -->
+<div class="app">
+
+  <!-- ═══════ NAV ═══════ -->
+  <nav class="nav">
+    <!-- Brand -->
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-text">
+        <span class="brand-name">Tylostek</span>
+        <span class="brand-slash">/ DASHBOARD</span>
+        <span class="brand-version">v1.0</span>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="agents">Agents</button>
+      <button class="tab" data-tab="tasks">Tasks</button>
+      <button class="tab" data-tab="schedule">Schedule</button>
+      <button class="tab" data-tab="content">Content</button>
+    </div>
+
+    <!-- Status -->
+    <div class="status-cluster">
+      <div class="status-pill">
+        <span class="status-dot"></span>
+        <span class="status-text">All systems operational</span>
+      </div>
+      <span class="clock" id="clock">00:00:00</span>
+    </div>
+  </nav>
+
+  <!-- ═══════ MAIN ═══════ -->
+  <div class="main">
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         OVERVIEW TAB
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-panel active" id="overview">
+
+      <!-- Stat tiles row -->
+      <div class="glass ov-stat">
+        <div class="panel-label">Gateway</div>
+        <div class="skeleton-line short"></div>
+        <div class="skeleton-line medium"></div>
+      </div>
+
+      <div class="glass ov-stat">
+        <div class="panel-label">Sessions</div>
+        <div class="skeleton-line short"></div>
+        <div class="skeleton-line medium"></div>
+      </div>
+
+      <div class="glass ov-stat">
+        <div class="panel-label">Agent Activity</div>
+        <div class="skeleton-line short"></div>
+        <div class="skeleton-line medium"></div>
+      </div>
+
+      <div class="glass ov-stat">
+        <div class="panel-label">Estimated Cost</div>
+        <div class="skeleton-line short"></div>
+        <div class="skeleton-line medium"></div>
+      </div>
+
+      <!-- VPS Health -->
+      <div class="glass ov-health">
+        <div class="panel-label">VPS Health</div>
+        <div class="health-row">
+          <div class="health-label">
+            <span class="health-label-text">CPU</span>
+            <span class="health-label-val">—</span>
+          </div>
+          <div class="health-bar"><div class="health-bar-fill"></div></div>
+        </div>
+        <div class="health-row">
+          <div class="health-label">
+            <span class="health-label-text">RAM</span>
+            <span class="health-label-val">—</span>
+          </div>
+          <div class="health-bar"><div class="health-bar-fill"></div></div>
+        </div>
+        <div class="health-row">
+          <div class="health-label">
+            <span class="health-label-text">Disk</span>
+            <span class="health-label-val">—</span>
+          </div>
+          <div class="health-bar"><div class="health-bar-fill"></div></div>
+        </div>
+      </div>
+
+      <!-- Agent Activity -->
+      <div class="glass ov-agents">
+        <div class="panel-label">Agent Activity</div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line medium"></div>
+      </div>
+
+      <!-- Recent Sessions table -->
+      <div class="glass ov-sessions">
+        <div class="panel-label">Recent Sessions</div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line medium"></div>
+      </div>
+
+      <!-- Side panel -->
+      <div class="glass ov-side">
+        <div class="panel-label">7-Day Activity</div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line short"></div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         AGENTS TAB
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="agents">
+
+      <div class="glass ag-summary">
+        <div class="panel-label">Agent Overview</div>
+        <div class="skeleton-line medium"></div>
+      </div>
+
+      <div class="glass ag-card">
+        <div class="panel-label">Analyst</div>
+        <div class="skeleton-line short"></div>
+        <div class="skeleton-line medium"></div>
+        <div class="skeleton-line full"></div>
+      </div>
+
+      <div class="glass ag-card">
+        <div class="panel-label">Writer</div>
+        <div class="skeleton-line short"></div>
+        <div class="skeleton-line medium"></div>
+        <div class="skeleton-line full"></div>
+      </div>
+
+      <div class="glass ag-card">
+        <div class="panel-label">Marketer</div>
+        <div class="skeleton-line short"></div>
+        <div class="skeleton-line medium"></div>
+        <div class="skeleton-line full"></div>
+      </div>
+
+      <div class="glass ag-card">
+        <div class="panel-label">Coder</div>
+        <div class="skeleton-line short"></div>
+        <div class="skeleton-line medium"></div>
+        <div class="skeleton-line full"></div>
+      </div>
+
+      <div class="glass ag-activity">
+        <div class="panel-label">Activity Log</div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line medium"></div>
+      </div>
+
+      <div class="glass ag-side">
+        <div class="panel-label">Agent Stats</div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line short"></div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         TASKS TAB
+         ═══════════════ Existing funnel + board skeleton ═════════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tasks">
+
+      <div class="glass tk-funnel">
+        <div class="panel-label">Task Funnel</div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line short"></div>
+      </div>
+
+      <div class="glass tk-board">
+        <div class="panel-label">Personal Board</div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line medium"></div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         SCHEDULE TAB
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="schedule">
+
+      <div class="glass sc-timeline">
+        <div class="panel-label">Schedule Timeline</div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line medium"></div>
+      </div>
+
+      <div class="glass sc-side">
+        <div class="panel-label">Cron Jobs</div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line short"></div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         CONTENT TAB — placeholder div, filled in Prompt 24
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="content">
+      <div class="glass" style="padding: 20px; min-height: 400px;">
+        <div class="panel-label">Content</div>
+        <!-- Prompt 24 will fill this -->
+      </div>
+    </div>
+
+  </div><!-- /.main -->
+</div><!-- /.app -->
+
+<script>
+  // ═════════════════════════════════════════════════════════════════════════
+  //  CLOCK — ticks every second, 24-hour format UTC
+  // ═════════════════════════════════════════════════════════════════════════
+  function updateClock() {
+    const now = new Date();
+    const h = String(now.getUTCHours()).padStart(2, '0');
+    const m = String(now.getUTCMinutes()).padStart(2, '0');
+    const s = String(now.getUTCSeconds()).padStart(2, '0');
+    document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  TAB SWITCHING
+  // ═════════════════════════════════════════════════════════════════════════
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+
+      // Switch active tab button
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+
+      // Switch active panel
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById(target).classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

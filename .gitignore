@@ -1,0 +1,18 @@
+# Backups
+*.bak.*
+
+# Databases
+*.db
+
+# Python cache
+__pycache__/
+
+# Logs
+*.log
+
+# Server runtime
+.server.pid
+
+# OS files
+.DS_Store
+Thumbs.db

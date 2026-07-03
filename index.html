@@ -1,0 +1,4742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tylostek — Mission Control</title>
+
+<!-- ─── Google Fonts: Inter Tight + JetBrains Mono ─── -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   CSS VARIABLES — Color palette
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --bg:            #15151F;
+
+  --violet:        #8B5CF6;
+  --violet-glow:   #A78BFA;
+  --cyan:          #7DD3FC;
+  --mint:          #5EE2B5;
+  --amber:         #F5B544;
+  --red:           #F26D6D;
+  --pink:          #F472B6;
+  --gold:          #FBBF24;
+  --magenta:       #E879F9;
+
+  --text:          #F4F4F8;
+  --muted:         #8A8A9B;
+
+  --glass-bg:      rgba(31, 31, 43, 0.55);
+  --glass-border:  rgba(255, 255, 255, 0.06);
+  --glass-blur:    24px;
+
+  --radius:        16px;
+  --radius-sm:     10px;
+  --radius-pill:   100px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESET
+   ═══════════════════════════════════════════════════════════════════════════ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter Tight', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BACKGROUND LAYERS — orbs + dot grid (never crisp)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Violet orb — top-left, large, soft */
+.bg-orb-violet {
+  position: fixed;
+  top: -200px;
+  left: -200px;
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.28) 0%, rgba(139, 92, 246, 0) 70%);
+  filter: blur(80px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Cyan orb — mid-right, large, soft */
+.bg-orb-cyan {
+  position: fixed;
+  top: 30%;
+  right: -250px;
+  width: 800px;
+  height: 800px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(125, 211, 252, 0.18) 0%, rgba(125, 211, 252, 0) 70%);
+  filter: blur(90px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Dot grid overlay — very low opacity, ~24px spacing */
+.bg-dotgrid {
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 24px 24px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYOUT WRAPPER
+   ═══════════════════════════════════════════════════════════════════════════ */
+.app {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NAV — fixed top bar
+   ═══════════════════════════════════════════════════════════════════════════ */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  background: rgba(21, 21, 31, 0.65);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-bottom: 1px solid var(--glass-border);
+  z-index: 100;
+}
+
+/* ─── Brand mark ─── */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: conic-gradient(from 180deg, var(--violet), var(--cyan), var(--violet));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.brand-mark::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--bg);
+}
+
+.brand-mark::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 8px var(--mint), 0 0 16px rgba(94, 226, 181, 0.5);
+  animation: pulse-dot 2.5s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.7); }
+}
+
+.brand-text {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.brand-name {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.brand-slash {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.brand-version {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 5px;
+  padding: 2px 7px;
+  margin-left: 4px;
+}
+
+/* ─── Tab pill (center) ─── */
+.tabs {
+  display: flex;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+}
+
+.tab {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 7px 18px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.25s, background 0.25s;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab.active {
+  background: #ffffff;
+  color: var(--bg);
+  font-weight: 600;
+}
+
+/* ─── Status pill (right) ─── */
+.status-cluster {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  padding: 7px 16px;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 6px var(--mint);
+  animation: pulse-dot 2.5s ease-in-out infinite;
+}
+
+.status-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.clock {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  min-width: 68px;
+  text-align: right;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MAIN — tab panels
+   ═══════════════════════════════════════════════════════════════════════════ */
+.main {
+  flex: 1;
+  padding: 88px 28px 32px;
+}
+
+.tab-panel {
+  display: none;
+  animation: fade-in 0.35s ease;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════ Violet dividers between panels (shared glass styling) ═══════════════════════════════════════════════════════════ */
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+}
+
+/* ─── Panel label (shared) ─── */
+.panel-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+}
+
+/* ─── Big number (shared) ─── */
+.big-number {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1;
+  color: var(--text);
+}
+
+.big-number .unit {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   OVERVIEW TAB
+   ═══════════════════════════════════════════════════════════════════════════ */
+#overview {
+  display: none;
+}
+#overview.active {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ─── Eyebrow ─── */
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 4px;
+  margin-bottom: -2px;
+}
+.eyebrow-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 6px var(--mint);
+  animation: pulse-dot 2.5s ease-in-out infinite;
+}
+.eyebrow-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--mint);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.eyebrow-divider {
+  width: 1px;
+  height: 14px;
+  background: rgba(255,255,255,0.1);
+}
+.eyebrow-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.eyebrow-version {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  margin-left: auto;
+}
+
+/* ─── Live Ops Console ─── */
+.ops-console {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.ops-grid {
+  display: grid;
+  grid-template-columns: 180px 1fr 1fr;
+  gap: 32px;
+  align-items: stretch;
+}
+
+/* Radar */
+.radar-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.radar-svg {
+  width: 180px;
+  height: 180px;
+}
+.radar-circle {
+  fill: none;
+  stroke: rgba(255,255,255,0.06);
+  stroke-width: 1;
+}
+.radar-crosshair {
+  stroke: rgba(255,255,255,0.04);
+  stroke-width: 1;
+}
+/* Radar sweep — driven by JS requestAnimationFrame, not CSS or SVG animation. */
+.radar-sweep-line {
+  stroke: var(--cyan);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 3px rgba(125,211,252,0.6));
+}
+.radar-sweep-dot {
+  fill: var(--cyan);
+  filter: drop-shadow(0 0 4px rgba(125,211,252,0.8));
+}
+.radar-agent-dot {
+  filter: drop-shadow(0 0 4px currentColor);
+  transition: cx 0.6s ease, cy 0.6s ease;
+}
+
+/* Center column — directive + context window */
+.ops-center {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.directive-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.directive-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  color: var(--cyan);
+  min-height: 60px;
+  line-height: 1.4;
+  transition: opacity 0.4s ease;
+}
+.directive-text.fading { opacity: 0; }
+
+.ctx-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.ctx-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.ctx-agent {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text);
+}
+.ctx-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+.ctx-segments {
+  display: flex;
+  gap: 3px;
+  margin-top: 8px;
+}
+.ctx-seg {
+  flex: 1;
+  height: 5px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.04);
+  transition: background 0.3s;
+}
+.ctx-seg.filled {
+  animation: seg-pulse 2s ease-in-out infinite;
+}
+@keyframes seg-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+.ctx-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Right column — health */
+.ops-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.health-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.health-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.health-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+.health-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+}
+.health-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-align: right;
+}
+.health-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.05);
+  overflow: hidden;
+}
+.health-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease, background 0.3s;
+}
+.fill-cpu    { background: linear-gradient(90deg, var(--cyan), var(--violet)); }
+.fill-ram    { background: linear-gradient(90deg, var(--violet), var(--magenta)); }
+.fill-disk   { background: linear-gradient(90deg, var(--mint), var(--cyan)); }
+.fill-amber  { background: var(--amber) !important; }
+.fill-red    { background: var(--red) !important; }
+.pct-cyan    { color: var(--cyan); }
+.pct-violet  { color: var(--violet-glow); }
+.pct-mint    { color: var(--mint); }
+.pct-amber   { color: var(--amber); }
+.pct-red     { color: var(--red); }
+
+.db-row {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.db-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+.db-size {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gold);
+}
+
+/* Ops footer */
+.ops-footer {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+}
+.ops-footer-cell {
+  padding: 0 16px;
+  border-left: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ops-footer-cell:first-child { border-left: none; padding-left: 0; }
+.ops-footer-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+.ops-footer-val {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+.ops-footer-val.mint { color: var(--mint); }
+.ops-footer-val.red  { color: var(--red); }
+
+/* ─── Stats Strip ─── */
+.stats-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+.stat-card {
+  padding: 18px 20px;
+  border-top: 2px solid;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.stat-card.mint    { border-top-color: var(--mint); }
+.stat-card.cyan    { border-top-color: var(--cyan); }
+.stat-card.violet  { border-top-color: var(--violet-glow); }
+.stat-card.gold    { border-top-color: var(--gold); }
+.stat-card.pink    { border-top-color: var(--pink); }
+.stat-card-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.stat-card-num {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(24px, 2.4vw, 34px);
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--text);
+}
+.stat-card-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.stat-card-sub .dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--mint);
+  animation: pulse-dot 2.5s ease-in-out infinite;
+}
+.decimal-jitter {
+  display: inline-block;
+  animation: decimal-flicker 1.8s ease-in-out infinite;
+}
+@keyframes decimal-flicker {
+  0%, 100% { opacity: 1; }
+  15%      { opacity: 0.3; }
+  30%      { opacity: 1; }
+}
+
+/* ─── Bottom Section ─── */
+.bottom-section {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 14px;
+}
+.throughput-card, .activity-card {
+  padding: 20px;
+}
+.throughput-num {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(34px, 4vw, 56px);
+  font-weight: 700;
+  color: var(--cyan);
+  line-height: 1;
+}
+.throughput-label {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 18px;
+  color: var(--muted);
+  margin-left: 8px;
+}
+.sparkline-canvas {
+  width: 100%;
+  height: 100px;
+  margin-top: 12px;
+  display: block;
+}
+.sparkline-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--mint);
+  margin-top: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.activity-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 280px;
+  overflow: hidden;
+}
+.activity-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  animation: slide-in 0.4s ease;
+}
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.activity-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.activity-desc {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.activity-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.activity-status.done { color: var(--mint); }
+.activity-status.fail { color: var(--red); }
+.activity-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ─── Skeleton (shared, kept for other tabs) ─── */
+.skeleton-line {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  margin-bottom: 8px;
+}
+.skeleton-line.short { width: 60%; }
+.skeleton-line.medium { width: 80%; }
+.skeleton-line.full { width: 100%; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AGENTS TAB
+   ═══════════════════════════════════════════════════════════════════════════ */
+#agents {
+  display: none;
+}
+#agents.active {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ─── Header ─── */
+.ag-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+.ag-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ag-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.ag-heading {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(17.5px, 2.45vw, 29.4px);
+  font-weight: 500;
+  letter-spacing: -1.5px;
+  line-height: 1;
+  color: var(--text);
+}
+
+/* ─── Status summary card ─── */
+.ag-status-card {
+  display: flex;
+  padding: 0;
+  overflow: hidden;
+}
+.ag-status-cell {
+  padding: 14px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-left: 1px solid rgba(255,255,255,0.06);
+}
+.ag-status-cell:first-child { border-left: none; }
+.ag-status-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+.ag-status-num {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1;
+}
+.ag-status-num.mint   { color: var(--mint); }
+.ag-status-num.amber  { color: var(--amber); }
+.ag-status-num.muted  { color: var(--muted); }
+
+/* ─── Agent cards row ─── */
+.ag-cards {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+.ag-card {
+  padding: 18px;
+  border-top: 2px solid;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ag-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ag-code-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.ag-platform-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ag-platform-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.ag-platform-pill.discord { background: rgba(167,139,250,0.12); color: var(--violet-glow); }
+.ag-platform-pill.telegram { background: rgba(125,211,252,0.12); color: var(--cyan); }
+.ag-status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+}
+.ag-status-dot.active { animation: pulse-dot 2.5s ease-in-out infinite; }
+.ag-status-dot.idle { background: var(--amber); }
+.ag-status-dot.dormant { background: rgba(255,255,255,0.1); }
+
+.ag-name {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+.ag-role {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ag-chart-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-top: 4px;
+}
+.ag-mini-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 32px;
+}
+.ag-mini-bar {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  min-height: 2px;
+  transition: height 0.4s ease;
+}
+.ag-stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  text-align: center;
+}
+.ag-stat-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ag-stat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.ag-stat-val {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+}
+.ag-stat-val.mint { color: var(--mint); }
+.ag-stat-val.amber { color: var(--amber); }
+.ag-stat-val.red { color: var(--red); }
+.ag-stat-val.muted { color: var(--muted); font-size: 12px; font-weight: 500; }
+
+.ag-load-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.05);
+  overflow: hidden;
+}
+.ag-load-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+.ag-last-task {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ag-last-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* ─── Agent Statistics ─── */
+.ag-stats-section {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 14px;
+}
+.ag-stats-eyebrow {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.ag-stats-eyebrow svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0.6;
+}
+.ag-stat-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.ag-stat-tile {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+.ag-stat-tile-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.ag-stat-tile-val {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+.ag-stat-tile-bar {
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(255,255,255,0.05);
+  overflow: hidden;
+  margin-top: auto;
+}
+.ag-stat-tile-fill {
+  height: 100%;
+  border-radius: 1px;
+  width: 0%;
+  transition: width 0.6s ease;
+}
+.fill-amber  { background: var(--amber); }
+.fill-cyan   { background: var(--cyan); }
+.fill-mint   { background: var(--mint); }
+.fill-red    { background: var(--red); }
+
+/* Donut card */
+.ag-donut-card {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.ag-donut-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  align-self: flex-start;
+}
+.ag-donut-canvas {
+  width: 130px;
+  height: 130px;
+}
+.ag-donut-legend {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.ag-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.ag-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ag-legend-name {
+  flex: 1;
+  color: var(--text);
+  text-transform: capitalize;
+}
+.ag-legend-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ─── Agent log ─── */
+.ag-log-card {
+  padding: 20px;
+}
+.ag-log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.ag-log-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.ag-log-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text);
+}
+.ag-filters {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.ag-filter-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+.ag-filter-btn:hover { color: var(--text); }
+.ag-filter-btn.active {
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+}
+.ag-log-table-wrap {
+  max-height: 420px;
+  overflow-y: auto;
+}
+.ag-log-table-wrap::-webkit-scrollbar { width: 6px; }
+.ag-log-table-wrap::-webkit-scrollbar-track { background: transparent; }
+.ag-log-table-wrap::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
+.ag-log-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.ag-log-table th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--glass-border);
+  position: sticky;
+  top: 0;
+  background: var(--panel-bg, rgba(21,21,31,0.9));
+  z-index: 1;
+}
+.ag-log-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.ag-log-table tr:hover td { background: rgba(255,255,255,0.02); }
+.ag-log-status {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.ag-log-status.done { background: rgba(94,226,181,0.12); color: var(--mint); }
+.ag-log-status.fail { background: rgba(242,109,109,0.12); color: var(--red); }
+
+/* ─── Responsive ─── */
+/* Agent cards: 5 → 3 → 2 → 1 */
+@media (max-width: 1100px) {
+  .ag-cards { grid-template-columns: repeat(3, 1fr); }
+  .ag-stats-section { grid-template-columns: 1fr; }
+  .ag-donut-card { align-self: start; }
+}
+@media (max-width: 768px) {
+  .ag-cards { grid-template-columns: repeat(2, 1fr); }
+  .ag-status-card { flex-direction: column; }
+  .ag-status-cell { border-left: none; border-top: 1px solid rgba(255,255,255,0.06); }
+  .ag-stat-cards { grid-template-columns: 1fr; }
+  .ag-header { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .ag-log-table { font-size: 11px; }
+  .ag-log-table th, .ag-log-table td { padding: 5px 6px; }
+}
+@media (max-width: 480px) {
+  .ag-cards { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TASKS TAB
+   ═══════════════════════════════════════════════════════════════════════════ */
+#tasks {
+  display: none;
+}
+#tasks.active {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ─── Header ─── */
+.tk-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.tk-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tk-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.tk-heading {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(17.5px, 2.45vw, 29.4px);
+  font-weight: 500;
+  letter-spacing: -1.5px;
+  line-height: 1;
+  color: var(--text);
+}
+.tk-col-pills {
+  display: flex;
+  gap: 8px;
+}
+.tk-col-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 100px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255,255,255,0.03);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.tk-col-pill .count {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ─── Stats strip ─── */
+.tk-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.tk-stat-card {
+  padding: 18px 20px;
+  border-top: 2px solid;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tk-stat-card.amber  { border-top-color: var(--amber); }
+.tk-stat-card.cyan   { border-top-color: var(--cyan); }
+.tk-stat-card.mint   { border-top-color: var(--mint); }
+.tk-stat-card.violet { border-top-color: var(--violet-glow); }
+.tk-stat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.tk-stat-num {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(24px, 2.4vw, 34px);
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--text);
+}
+.tk-stat-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.tk-stat-sub.cyan { color: var(--cyan); }
+
+/* ─── Board ─── */
+.tk-board-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.tk-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 200px;
+}
+.tk-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid;
+}
+.tk-col-header.amber  { border-bottom-color: rgba(245, 181, 68, 0.4); }
+.tk-col-header.cyan   { border-bottom-color: rgba(125, 211, 252, 0.4); }
+.tk-col-header.mint   { border-bottom-color: rgba(94, 226, 181, 0.4); }
+.tk-col-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+.tk-col-name.amber { color: var(--amber); }
+.tk-col-name.cyan  { color: var(--cyan); }
+.tk-col-name.mint  { color: var(--mint); }
+.tk-col-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.tk-col-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  padding: 4px;
+  border-radius: 8px;
+  transition: outline 0.2s, background 0.2s;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+.tk-col-body.drag-over {
+  outline-color: var(--accent-color);
+  background: rgba(255,255,255,0.02);
+}
+.tk-empty {
+  border: 2px dashed rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 28px 12px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: rgba(138, 138, 155, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+/* ─── Task card ─── */
+.tk-task {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: grab;
+  position: relative;
+  transition: border-color 0.2s, transform 0.15s;
+}
+.tk-task:hover {
+  border-color: rgba(255,255,255,0.12);
+  transform: translateY(-1px);
+}
+.tk-task.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+.tk-task-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tk-task-title {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+.tk-task-del {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 2px;
+  opacity: 0.4;
+  transition: opacity 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+.tk-task-del:hover {
+  opacity: 1;
+  color: var(--red);
+}
+.tk-task-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tk-priority-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.tk-priority-dot.high   { background: var(--red); }
+.tk-priority-dot.medium { background: var(--amber); }
+.tk-priority-dot.low    { background: var(--mint); }
+.tk-task-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* ─── Add form ─── */
+.tk-add-panel {
+  padding: 14px;
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+}
+.tk-add-panel.open {
+  display: flex;
+}
+.tk-add-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tk-add-row input, .tk-add-row select {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'Inter Tight', sans-serif;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.tk-add-row input { flex: 1; min-width: 200px; }
+.tk-add-row input:focus, .tk-add-row select:focus { border-color: var(--violet); }
+.tk-add-row select {
+  cursor: pointer;
+  min-width: 110px;
+}
+.tk-add-btn {
+  background: var(--violet);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.tk-add-btn:hover { opacity: 0.85; }
+.tk-add-cancel {
+  background: none;
+  border: 1px solid var(--glass-border);
+  color: var(--muted);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.tk-add-cancel:hover { color: var(--red); border-color: var(--red); }
+.tk-add-trigger {
+  align-self: flex-start;
+  background: rgba(255,255,255,0.04);
+  border: 1px dashed var(--glass-border);
+  color: var(--muted);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: 'Inter Tight', sans-serif;
+  transition: all 0.2s;
+}
+.tk-add-trigger:hover {
+  color: var(--violet);
+  border-color: var(--violet);
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 1100px) {
+  .tk-stats { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .tk-board-grid { grid-template-columns: 1fr; }
+  .tk-header { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 480px) {
+  .tk-stats { grid-template-columns: 1fr; }
+  .tk-add-row { flex-direction: column; }
+  .tk-add-row input, .tk-add-row select { width: 100%; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCHEDULE TAB
+   ═══════════════════════════════════════════════════════════════════════════ */
+#schedule {
+  display: none;
+}
+#schedule.active {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ─── Header ─── */
+.sc-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.sc-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sc-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.sc-heading {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(17.5px, 2.45vw, 29.4px);
+  font-weight: 500;
+  letter-spacing: -1.5px;
+  line-height: 1;
+  color: var(--text);
+}
+.sc-next-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* ─── Countdown card (header right) ─── */
+.sc-countdown-card {
+  padding: 14px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+}
+.sc-countdown-top {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.sc-countdown-val {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--violet-glow), var(--violet));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Stats strip ─── */
+.sc-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.sc-stat-card {
+  padding: 18px 20px;
+  border-top: 2px solid;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sc-stat-card.cyan   { border-top-color: var(--cyan); }
+.sc-stat-card.mint   { border-top-color: var(--mint); }
+.sc-stat-card.muted  { border-top-color: var(--muted); }
+.sc-stat-card.violet { border-top-color: var(--violet-glow); }
+.sc-stat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.sc-stat-num {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(24px, 2.4vw, 34px);
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--text);
+}
+.sc-stat-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ─── Job group cards ─── */
+.sc-group-card {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sc-group-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.sc-group-eyebrow.amber  { color: var(--amber); }
+.sc-group-eyebrow.violet { color: var(--violet-glow); }
+.sc-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sc-group-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sc-group-subheader {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  opacity: 0.6;
+}
+.sc-group-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 100px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--glass-border);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+.sc-chips {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.sc-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-left: 3px solid;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+  min-width: 160px;
+  max-width: 240px;
+  flex: 1 1 180px;
+}
+.sc-chip-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+.sc-chip-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.sc-chip-name {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.sc-chip-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* ─── Calendar card ─── */
+.sc-cal-card {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sc-cal-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sc-cal-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.sc-cal-subtitle {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  margin-top: 2px;
+}
+.sc-cal-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sc-legend-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+.sc-cal-toggle {
+  display: flex;
+  gap: 2px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: 100px;
+  padding: 2px;
+}
+.sc-cal-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 100px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.sc-cal-btn.active {
+  background: #fff;
+  color: var(--bg);
+}
+.sc-cal-body {
+  display: flex;
+  gap: 16px;
+}
+.sc-cal-main {
+  flex: 1;
+  min-width: 0;
+}
+.sc-cal-legend {
+  width: 210px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.sc-legend-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.sc-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sc-legend-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 50px;
+}
+.sc-legend-name {
+  color: var(--text);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Week view */
+.sc-week {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sc-week-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sc-week-day {
+  width: 60px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.sc-week-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(255,255,255,0.04);
+  color: var(--muted);
+}
+.sc-week-circle.today {
+  background: var(--violet);
+  color: #fff;
+}
+.sc-week-daylabel {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.sc-week-bar {
+  flex: 1;
+  height: 2px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 1px;
+  position: relative;
+}
+.sc-week-bar.today-bar {
+  background: rgba(139, 92, 246, 0.08);
+}
+.sc-week-row.today-row {
+  background: rgba(139, 92, 246, 0.03);
+  border-radius: 6px;
+  padding: 2px 0;
+}
+.sc-week-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 0 3px currentColor);
+}
+.sc-week-now-line {
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  width: 1.5px;
+  background: var(--violet);
+  box-shadow: 0 0 4px var(--violet);
+}
+.sc-week-now-dot {
+  position: absolute;
+  top: -4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--violet);
+  box-shadow: 0 0 6px var(--violet);
+  transform: translateX(-50%);
+}
+.sc-week-axis {
+  display: flex;
+  justify-content: space-between;
+  padding-left: 72px;
+  margin-top: 4px;
+}
+.sc-week-axis-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: rgba(138, 138, 155, 0.4);
+}
+
+/* Month view */
+.sc-month {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sc-month-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.sc-month-dow {
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 4px 0;
+}
+.sc-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.sc-month-cell {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: 8px;
+  padding: 4px;
+  background: rgba(255,255,255,0.02);
+}
+.sc-month-cell.empty {
+  background: transparent;
+}
+.sc-month-cell.today {
+  outline: 2px solid var(--violet);
+  outline-offset: -2px;
+}
+.sc-month-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.sc-month-num.today {
+  background: var(--violet);
+  color: #fff;
+}
+.sc-month-dots {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.sc-month-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 1100px) {
+  .sc-stats { grid-template-columns: repeat(2, 1fr); }
+  .sc-cal-body { flex-direction: column; }
+  .sc-cal-legend { width: 100%; flex-direction: row; flex-wrap: wrap; gap: 8px; }
+}
+@media (max-width: 768px) {
+  .sc-header { flex-direction: column; align-items: flex-start; }
+  .sc-cal-legend { display: none; }
+  .sc-week-day { width: 50px; }
+  .sc-week-axis { padding-left: 62px; }
+}
+@media (max-width: 480px) {
+  .sc-stats { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONTENT TAB
+   ═══════════════════════════════════════════════════════════════════════════ */
+#content {
+  display: none;
+}
+#content.active {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ─── Header ─── */
+.ct-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.ct-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ct-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.ct-heading {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(17.5px, 2.45vw, 29.4px);
+  font-weight: 500;
+  letter-spacing: -1.5px;
+  line-height: 1;
+  color: var(--text);
+}
+.ct-new-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-left: 3px solid var(--violet);
+  border-radius: 0 8px 8px 0;
+  background: rgba(255,255,255,0.03);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  font-family: 'Inter Tight', sans-serif;
+  transition: background 0.2s;
+}
+.ct-new-btn:hover { background: rgba(139,92,246,0.08); }
+
+/* ─── Stats strip ─── */
+.ct-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.ct-stat-card {
+  padding: 18px 20px;
+  border-top: 2px solid;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ct-stat-card.violet { border-top-color: var(--violet-glow); }
+.ct-stat-card.cyan   { border-top-color: var(--cyan); }
+.ct-stat-card.mint   { border-top-color: var(--mint); }
+.ct-stat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.ct-stat-num {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(24px, 2.4vw, 34px);
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--text);
+}
+.ct-stat-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ─── New doc form ─── */
+.ct-new-panel {
+  padding: 14px;
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+}
+.ct-new-panel.open { display: flex; }
+.ct-new-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.ct-new-row input, .ct-new-row select, .ct-new-row textarea {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'Inter Tight', sans-serif;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.ct-new-row input:focus, .ct-new-row select:focus, .ct-new-row textarea:focus {
+  border-color: var(--violet);
+}
+.ct-new-row input { flex: 1; min-width: 200px; }
+.ct-new-row select { min-width: 130px; cursor: pointer; }
+.ct-new-row textarea {
+  width: 100%;
+  min-height: 200px;
+  resize: vertical;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.ct-new-btns {
+  display: flex;
+  gap: 8px;
+}
+.ct-create-btn {
+  background: var(--violet);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ct-create-btn:hover { opacity: 0.85; }
+.ct-cancel-btn {
+  background: none;
+  border: 1px solid var(--glass-border);
+  color: var(--muted);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.ct-cancel-btn:hover { color: var(--red); border-color: var(--red); }
+
+/* ─── Split layout ─── */
+.ct-split {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 18px;
+}
+
+/* Left panel */
+.ct-left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ct-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ct-filter-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+.ct-filter-pill:hover { color: var(--text); }
+.ct-filter-pill.active {
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+}
+.ct-doc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+.ct-doc-list::-webkit-scrollbar { width: 6px; }
+.ct-doc-list::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
+.ct-doc-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ct-doc-item:hover { background: rgba(255,255,255,0.03); }
+.ct-doc-item.active {
+  border-left-color: var(--violet);
+  background: rgba(139,92,246,0.05);
+}
+.ct-doc-item-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ct-doc-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+.ct-doc-title {
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.ct-doc-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* Right panel — viewer */
+.ct-viewer {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 400px;
+}
+.ct-viewer-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ct-viewer-title {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+}
+.ct-viewer-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+.ct-viewer-actions {
+  display: flex;
+  gap: 6px;
+}
+.ct-action-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+.ct-action-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+.ct-action-btn.edit { color: var(--amber); border-color: rgba(245,181,68,0.3); }
+.ct-action-btn.edit:hover { background: rgba(245,181,68,0.1); }
+.ct-action-btn.del { color: var(--red); border-color: rgba(242,109,109,0.3); }
+.ct-action-btn.del:hover { background: rgba(242,109,109,0.1); }
+
+/* Markdown rendered content */
+.ct-body {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  overflow-y: auto;
+  max-height: 500px;
+  padding-right: 8px;
+}
+.ct-body h1 { font-size: 24px; font-weight: 700; margin: 16px 0 8px; color: var(--text); }
+.ct-body h2 { font-size: 20px; font-weight: 600; margin: 14px 0 6px; color: var(--text); }
+.ct-body h3 { font-size: 16px; font-weight: 600; margin: 12px 0 4px; color: var(--text); }
+.ct-body p { margin: 8px 0; color: var(--text); }
+.ct-body ul, .ct-body ol { margin: 8px 0; padding-left: 20px; }
+.ct-body li { margin: 4px 0; }
+.ct-body code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  background: rgba(255,255,255,0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--cyan);
+}
+.ct-body pre {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 12px;
+  overflow-x: auto;
+  margin: 10px 0;
+}
+.ct-body pre code {
+  background: none;
+  padding: 0;
+  color: var(--text);
+}
+.ct-body blockquote {
+  border-left: 3px solid var(--violet);
+  padding-left: 12px;
+  margin: 10px 0;
+  color: var(--muted);
+}
+.ct-body a { color: var(--cyan); text-decoration: none; }
+.ct-body a:hover { text-decoration: underline; }
+.ct-body hr { border: none; border-top: 1px solid var(--glass-border); margin: 16px 0; }
+
+/* Editor */
+.ct-editor {
+  width: 100%;
+  min-height: 300px;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+  padding: 12px;
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+}
+.ct-editor:focus { border-color: var(--violet); }
+
+/* Empty state */
+.ct-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 1100px) {
+  .ct-stats { grid-template-columns: 1fr; }
+  .ct-split { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .ct-header { flex-direction: column; align-items: flex-start; }
+  .ct-doc-list { max-height: 300px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE — global breakpoints for all tabs
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Tablet landscape (≤1100px) ─── */
+@media (max-width: 1100px) {
+  /* Nav */
+  .nav { padding: 0 16px; }
+  .tabs { gap: 0; }
+  .tab { padding: 7px 12px; font-size: 10px; }
+
+  /* Overview: ops console → stack columns */
+  .ops-grid { grid-template-columns: 1fr; gap: 20px; }
+  .radar-wrap { justify-content: flex-start; }
+
+  /* Stats strip: 5 → 3 (wrap) */
+  .stats-strip { grid-template-columns: repeat(3, 1fr); }
+
+  /* Bottom section: side by side → stacked */
+  .bottom-section { grid-template-columns: 1fr; }
+
+  /* Ops footer: 5 → 3 */
+  .ops-footer { grid-template-columns: repeat(3, 1fr); }
+  .ops-footer-cell:nth-child(4) { border-left: none; padding-left: 0; }
+  .ops-footer-cell:nth-child(5) { grid-column: span 3; }
+
+  /* Tasks tab */
+  .tk-funnel { grid-column: span 12; }
+  .tk-board { grid-column: span 12; }
+
+  /* Schedule tab */
+  .sc-timeline { grid-column: span 12; }
+  .sc-side { grid-column: span 12; }
+
+  .main { padding: 80px 16px 24px; }
+}
+
+/* ─── Tablet portrait (≤768px) ─── */
+@media (max-width: 768px) {
+  /* Nav: hide tabs, show scrollable */
+  .nav { padding: 0 12px; height: 56px; }
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { padding: 6px 10px; font-size: 9px; letter-spacing: 1px; }
+  .status-text { display: none; }
+  .brand-name { font-size: 16px; }
+  .brand-slash { font-size: 9px; }
+  .brand-version { font-size: 9px; padding: 1px 5px; }
+
+  /* Overview */
+  .stats-strip { grid-template-columns: repeat(2, 1fr); }
+  .ops-footer { grid-template-columns: repeat(2, 1fr); }
+  .ops-footer-cell { border-left: none; padding-left: 0; }
+  .ops-footer-cell:nth-child(5) { grid-column: span 2; }
+  .ops-console { padding: 16px; }
+  .ops-grid { gap: 16px; }
+
+  /* Stats strip numbers smaller */
+  .stat-card-num { font-size: 22px; }
+  .stat-card { padding: 14px; }
+  .throughput-num { font-size: 32px; }
+
+  /* Tasks tab */
+  #tasks.active { grid-template-columns: 1fr; }
+
+  /* Schedule tab */
+  #schedule.active { grid-template-columns: 1fr; }
+
+  .main { padding: 68px 12px 20px; }
+}
+
+/* ─── Mobile (≤480px) ─── */
+@media (max-width: 480px) {
+  /* Overview */
+  .stats-strip { grid-template-columns: 1fr; }
+  .ops-footer { grid-template-columns: 1fr; }
+  .ops-footer-cell { border-left: none; padding-left: 0; }
+  .ops-footer-cell:nth-child(5) { grid-column: span 1; }
+
+  /* Big numbers smaller */
+  .stat-card-num { font-size: 20px; }
+  .throughput-num { font-size: 28px; }
+  .ag-heading { font-size: 28px; }
+  .ag-stat-tile-val { font-size: 28px; }
+
+  /* Nav: minimal */
+  .brand-slash { display: none; }
+  .clock { font-size: 10px; min-width: 56px; }
+
+  .main { padding: 64px 10px 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── Background layers ─── -->
+<div class="bg-orb-violet"></div>
+<div class="bg-orb-cyan"></div>
+<div class="bg-dotgrid"></div>
+
+<!-- ─── App ─── -->
+<div class="app">
+
+  <!-- ═══════ NAV ═══════ -->
+  <nav class="nav">
+    <!-- Brand -->
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-text">
+        <span class="brand-name">Tylostek</span>
+        <span class="brand-slash">/ DASHBOARD</span>
+        <span class="brand-version">v1.8</span>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="agents">Agents</button>
+      <button class="tab" data-tab="tasks">Tasks</button>
+      <button class="tab" data-tab="schedule">Schedule</button>
+      <button class="tab" data-tab="content">Content</button>
+    </div>
+
+    <!-- Status -->
+    <div class="status-cluster">
+      <div class="status-pill">
+        <span class="status-dot"></span>
+        <span class="status-text">All systems operational</span>
+      </div>
+      <span class="clock" id="clock">00:00:00</span>
+    </div>
+  </nav>
+
+  <!-- ═══════ MAIN ═══════ -->
+  <div class="main">
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         OVERVIEW TAB
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-panel active" id="overview">
+
+      <!-- Eyebrow -->
+      <div class="eyebrow">
+        <span class="eyebrow-dot"></span>
+        <span class="eyebrow-text">UPLINK SYNCED</span>
+        <span class="eyebrow-divider"></span>
+        <span class="eyebrow-label">Hermes Orchestrator</span>
+        <span class="eyebrow-divider"></span>
+        <span class="eyebrow-version" id="eyebrowVersion">v1.8</span>
+      </div>
+
+      <!-- Live Ops Console -->
+      <div class="glass ops-console">
+        <div class="ops-grid">
+
+          <!-- Left: Radar -->
+          <div class="radar-wrap">
+            <svg class="radar-svg" viewBox="0 0 140 140" id="radarSvg">
+              <!-- Concentric circles -->
+              <circle class="radar-circle" cx="70" cy="70" r="62"/>
+              <circle class="radar-circle" cx="70" cy="70" r="46"/>
+              <circle class="radar-circle" cx="70" cy="70" r="30"/>
+              <circle class="radar-circle" cx="70" cy="70" r="14"/>
+              <!-- Crosshairs -->
+              <line class="radar-crosshair" x1="70" y1="8" x2="70" y2="132"/>
+              <line class="radar-crosshair" x1="8" y1="70" x2="132" y2="70"/>
+              <!-- Agent dots (rendered by JS) -->
+              <g id="radarDots"></g>
+              <!-- Sweep (rotated by JS) -->
+              <g id="radarSweep">
+                <line class="radar-sweep-line" x1="70" y1="70" x2="70" y2="8"/>
+                <circle class="radar-sweep-dot" cx="70" cy="8" r="2.5"/>
+              </g>
+            </svg>
+          </div>
+
+          <!-- Center: Directive + Context Window -->
+          <div class="ops-center">
+            <div class="directive-label">Current Directive</div>
+            <div class="directive-text" id="directiveText">Awaiting data…</div>
+            <div class="ctx-label" style="margin-top:8px;">Context Window</div>
+            <div class="ctx-header">
+              <span class="ctx-agent" id="ctxAgent">—</span>
+              <span class="ctx-count" id="ctxCount">0 tasks</span>
+            </div>
+            <div class="ctx-segments" id="ctxSegments"></div>
+            <div class="ctx-status" id="ctxStatus">—</div>
+          </div>
+
+          <!-- Right: Hostinger Health -->
+          <div class="ops-right">
+            <div class="panel-label">Hostinger Health</div>
+
+            <div class="health-metric">
+              <div class="health-top">
+                <span class="health-name">CPU</span>
+                <span class="health-pct pct-cyan" id="cpuPct">—</span>
+              </div>
+              <div class="health-track"><div class="health-fill fill-cpu" id="cpuFill" style="width:0%"></div></div>
+            </div>
+
+            <div class="health-metric">
+              <div class="health-top">
+                <span class="health-name">RAM</span>
+                <span class="health-pct pct-violet" id="ramPct">—</span>
+              </div>
+              <div class="health-track"><div class="health-fill fill-ram" id="ramFill" style="width:0%"></div></div>
+              <div class="health-sub" id="ramSub">— / — MB</div>
+            </div>
+
+            <div class="health-metric">
+              <div class="health-top">
+                <span class="health-name">Disk</span>
+                <span class="health-pct pct-mint" id="diskPct">—</span>
+              </div>
+              <div class="health-track"><div class="health-fill fill-disk" id="diskFill" style="width:0%"></div></div>
+              <div class="health-sub" id="diskSub">— / — GB</div>
+            </div>
+
+            <div class="db-row">
+              <span class="db-label">Hermes DBs</span>
+              <span class="db-size" id="dbSize">— MB</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="ops-footer">
+          <div class="ops-footer-cell">
+            <span class="ops-footer-label">Queue</span>
+            <span class="ops-footer-val" id="footQueue">—</span>
+          </div>
+          <div class="ops-footer-cell">
+            <span class="ops-footer-label">Sessions</span>
+            <span class="ops-footer-val" id="footSessions">—</span>
+          </div>
+          <div class="ops-footer-cell">
+            <span class="ops-footer-label">Errors</span>
+            <span class="ops-footer-val" id="footErrors">—</span>
+          </div>
+          <div class="ops-footer-cell">
+            <span class="ops-footer-label">Today</span>
+            <span class="ops-footer-val" id="footToday">—</span>
+          </div>
+          <div class="ops-footer-cell">
+            <span class="ops-footer-label">Uptime</span>
+            <span class="ops-footer-val" id="footUptime">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Strip -->
+      <div class="stats-strip">
+        <div class="glass stat-card mint">
+          <div class="stat-card-label">Integrity</div>
+          <div class="stat-card-num" id="statIntegrity">—<span class="decimal-jitter" id="statIntegrityDec">.00</span><span style="font-size:16px;color:var(--muted)">%</span></div>
+          <div class="stat-card-sub"><span class="dot"></span><span id="statIntegritySub">— of 5 responsive</span></div>
+        </div>
+        <div class="glass stat-card cyan">
+          <div class="stat-card-label">Agent Calls</div>
+          <div class="stat-card-num" id="statCalls">—</div>
+          <div class="stat-card-sub" id="statCallsSub">—</div>
+        </div>
+        <div class="glass stat-card violet">
+          <div class="stat-card-label">Messages</div>
+          <div class="stat-card-num" id="statMessages">—</div>
+          <div class="stat-card-sub" id="statMessagesSub">—</div>
+        </div>
+        <div class="glass stat-card gold">
+          <div class="stat-card-label">Tokens In</div>
+          <div class="stat-card-num" id="statTokensIn">—</div>
+          <div class="stat-card-sub" id="statTokensInSub">—</div>
+        </div>
+        <div class="glass stat-card pink">
+          <div class="stat-card-label">Cache Hits</div>
+          <div class="stat-card-num" id="statCacheHits">—</div>
+          <div class="stat-card-sub" id="statCacheHitsSub">—</div>
+        </div>
+      </div>
+
+      <!-- Bottom Section -->
+      <div class="bottom-section">
+        <div class="glass throughput-card">
+          <div class="panel-label">Throughput</div>
+          <div style="display:flex;align-items:baseline;gap:4px;">
+            <span class="throughput-num" id="throughputNum">0</span>
+            <span class="throughput-label">responses total</span>
+          </div>
+          <canvas class="sparkline-canvas" id="sparkline" width="600" height="100"></canvas>
+          <div class="sparkline-sub" id="sparklineSub">—</div>
+        </div>
+
+        <div class="glass activity-card">
+          <div class="panel-label">Activity</div>
+          <div class="activity-feed" id="activityFeed"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         AGENTS TAB
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="agents">
+
+      <!-- Header -->
+      <div class="ag-header">
+        <div class="ag-header-left">
+          <div class="ag-eyebrow">SUBAGENTS</div>
+          <div class="ag-heading">Team Stats.</div>
+        </div>
+        <div class="glass ag-status-card">
+          <div class="ag-status-cell">
+            <span class="ag-status-label">Active</span>
+            <span class="ag-status-num mint" id="agActiveCount">—</span>
+          </div>
+          <div class="ag-status-cell">
+            <span class="ag-status-label">Idle</span>
+            <span class="ag-status-num amber" id="agIdleCount">—</span>
+          </div>
+          <div class="ag-status-cell">
+            <span class="ag-status-label">Dormant</span>
+            <span class="ag-status-num muted" id="agDormantCount">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent cards -->
+      <div class="ag-cards" id="agCards"></div>
+
+      <!-- Agent Statistics -->
+      <div class="ag-stats-section">
+        <div class="ag-stats-eyebrow">
+          <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="8" width="3" height="6" rx="0.5"/><rect x="6" y="5" width="3" height="9" rx="0.5"/><rect x="11" y="2" width="3" height="12" rx="0.5"/></svg>
+          Agent Statistics
+        </div>
+
+        <!-- Stat cards 2×2 -->
+        <div class="ag-stat-cards">
+          <div class="glass ag-stat-tile">
+            <span class="ag-stat-tile-label">Tasks Today</span>
+            <span class="ag-stat-tile-val" id="agStatToday">—</span>
+            <div class="ag-stat-tile-bar"><div class="ag-stat-tile-fill fill-amber" id="agStatTodayBar"></div></div>
+          </div>
+          <div class="glass ag-stat-tile">
+            <span class="ag-stat-tile-label">Tasks This Week</span>
+            <span class="ag-stat-tile-val" id="agStatWeek">—</span>
+            <div class="ag-stat-tile-bar"><div class="ag-stat-tile-fill fill-cyan" id="agStatWeekBar"></div></div>
+          </div>
+          <div class="glass ag-stat-tile">
+            <span class="ag-stat-tile-label">Most Active</span>
+            <span class="ag-stat-tile-val" id="agStatMostActive">—</span>
+            <div class="ag-stat-tile-bar"><div class="ag-stat-tile-fill" id="agStatMostActiveBar"></div></div>
+          </div>
+          <div class="glass ag-stat-tile">
+            <span class="ag-stat-tile-label">Success Rate</span>
+            <span class="ag-stat-tile-val" id="agStatSuccess">—</span>
+            <div class="ag-stat-tile-bar"><div class="ag-stat-tile-fill" id="agStatSuccessBar"></div></div>
+          </div>
+        </div>
+
+        <!-- Donut chart -->
+        <div class="glass ag-donut-card">
+          <span class="ag-donut-eyebrow">Task Distribution</span>
+          <canvas class="ag-donut-canvas" id="agDonut" width="130" height="130"></canvas>
+          <div class="ag-donut-legend" id="agDonutLegend"></div>
+        </div>
+      </div>
+
+      <!-- Agent log -->
+      <div class="glass ag-log-card">
+        <div class="ag-log-header">
+          <span class="ag-log-title">Agent Logs</span>
+          <span class="ag-log-count" id="agLogCount">0 entries</span>
+        </div>
+        <div class="ag-filters" id="agFilters"></div>
+        <div class="ag-log-table-wrap">
+          <table class="ag-log-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Agent</th>
+                <th>Task</th>
+                <th>Model</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="agLogBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         TASKS TAB
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tasks">
+
+      <!-- Header -->
+      <div class="tk-header">
+        <div class="tk-header-left">
+          <div class="tk-eyebrow">EXECUTION</div>
+          <div class="tk-heading">Task board.</div>
+        </div>
+        <div class="tk-col-pills" id="tkColPills"></div>
+      </div>
+
+      <!-- Stats strip -->
+      <div class="tk-stats">
+        <div class="glass tk-stat-card amber">
+          <div class="tk-stat-label">Kanban Tasks</div>
+          <div class="tk-stat-num" id="tkStatTotal">—</div>
+          <div class="tk-stat-sub" id="tkStatTotalSub">—</div>
+        </div>
+        <div class="glass tk-stat-card cyan">
+          <div class="tk-stat-label">Cron Jobs</div>
+          <div class="tk-stat-num" id="tkStatCron">—</div>
+          <div class="tk-stat-sub" id="tkStatCronSub">—</div>
+        </div>
+        <div class="glass tk-stat-card mint">
+          <div class="tk-stat-label">Done</div>
+          <div class="tk-stat-num" id="tkStatDone">—</div>
+          <div class="tk-stat-sub" id="tkStatDoneSub">—</div>
+        </div>
+        <div class="glass tk-stat-card violet">
+          <div class="tk-stat-label">Next Cron</div>
+          <div class="tk-stat-num" id="tkStatNextCron" style="font-size:clamp(18px,1.8vw,24px);">—</div>
+          <div class="tk-stat-sub" id="tkStatNextCronSub">—</div>
+        </div>
+      </div>
+
+      <!-- Add form -->
+      <button class="tk-add-trigger" id="tkAddTrigger" onclick="toggleAddForm()">+ Add Task</button>
+      <div class="glass tk-add-panel" id="tkAddPanel">
+        <div class="tk-add-row">
+          <input type="text" id="tkNewTitle" placeholder="Task title..." onkeydown="if(event.key==='Enter')submitAddForm()" />
+          <select id="tkNewPriority">
+            <option value="high">High</option>
+            <option value="medium" selected>Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <select id="tkNewColumn">
+            <option value="pending" selected>Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Done</option>
+          </select>
+          <button class="tk-add-btn" onclick="submitAddForm()">Add</button>
+          <button class="tk-add-cancel" onclick="toggleAddForm()">✕</button>
+        </div>
+      </div>
+
+      <!-- Board -->
+      <div class="tk-board-grid" id="tkBoardGrid">
+        <div class="tk-column" data-status="pending" data-color="amber">
+          <div class="tk-col-header amber">
+            <span class="tk-col-name amber">Pending</span>
+            <span class="tk-col-count" id="tkCountPending">0</span>
+          </div>
+          <div class="tk-col-body" id="tkColPending" data-status="pending" style="--accent-color:var(--amber)"></div>
+        </div>
+        <div class="tk-column" data-status="in_progress" data-color="cyan">
+          <div class="tk-col-header cyan">
+            <span class="tk-col-name cyan">In Progress</span>
+            <span class="tk-col-count" id="tkCountInProgress">0</span>
+          </div>
+          <div class="tk-col-body" id="tkColInProgress" data-status="in_progress" style="--accent-color:var(--cyan)"></div>
+        </div>
+        <div class="tk-column" data-status="completed" data-color="mint">
+          <div class="tk-col-header mint">
+            <span class="tk-col-name mint">Done</span>
+            <span class="tk-col-count" id="tkCountDone">0</span>
+          </div>
+          <div class="tk-col-body" id="tkColDone" data-status="completed" style="--accent-color:var(--mint)"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         SCHEDULE TAB
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="schedule">
+
+      <!-- Header -->
+      <div class="sc-header">
+        <div class="sc-header-left">
+          <div class="sc-eyebrow">CRON CALENDAR</div>
+          <div class="sc-heading">Schedule.</div>
+        </div>
+        <div class="glass sc-countdown-card">
+          <div class="sc-countdown-top" id="scCdTop">CD · —</div>
+          <div class="sc-countdown-val" id="scCdVal">—</div>
+        </div>
+      </div>
+
+      <!-- Stats strip -->
+      <div class="sc-stats">
+        <div class="glass sc-stat-card cyan">
+          <div class="sc-stat-label">Total Jobs</div>
+          <div class="sc-stat-num" id="scStatTotal">—</div>
+          <div class="sc-stat-sub" id="scStatTotalSub">—</div>
+        </div>
+        <div class="glass sc-stat-card mint">
+          <div class="sc-stat-label">Hermes Jobs</div>
+          <div class="sc-stat-num" id="scStatHermes">—</div>
+          <div class="sc-stat-sub" id="scStatHermesSub">—</div>
+        </div>
+        <div class="glass sc-stat-card muted">
+          <div class="sc-stat-label">System Jobs</div>
+          <div class="sc-stat-num" id="scStatSystem">—</div>
+          <div class="sc-stat-sub" id="scStatSystemSub">—</div>
+        </div>
+        <div class="glass sc-stat-card violet">
+          <div class="sc-stat-label">Next Run</div>
+          <div class="sc-stat-num" id="scStatNext" style="font-size:clamp(18px,1.8vw,24px);">—</div>
+          <div class="sc-stat-sub" id="scStatNextSub">—</div>
+        </div>
+      </div>
+
+      <!-- Job groups -->
+      <div class="glass sc-group-card" id="scDailyGroup">
+        <div class="sc-group-header">
+          <div class="sc-group-header-left">
+            <div class="sc-group-eyebrow" style="color:var(--cyan)">Daily · runs every day</div>
+            <div class="sc-group-subheader">FIXED DAILY AUTOMATION</div>
+          </div>
+          <span class="sc-group-badge" id="scDailyBadge">0 JOBS</span>
+        </div>
+        <div class="sc-chips" id="scDailyChips"></div>
+      </div>
+
+      <div class="glass sc-group-card" id="scMonthlyPeriodicGroup">
+        <div class="sc-group-header">
+          <div class="sc-group-header-left">
+            <div class="sc-group-eyebrow amber">Monthly · 1st of month</div>
+            <div class="sc-group-subheader">MONTHLY MAINTENANCE</div>
+          </div>
+          <span class="sc-group-badge" id="scMonthlyBadge">0 JOBS</span>
+        </div>
+        <div class="sc-chips" id="scMonthlyChips"></div>
+        <div class="sc-group-header" style="margin-top:10px;">
+          <div class="sc-group-header-left">
+            <div class="sc-group-eyebrow violet">Periodic / Reboot</div>
+            <div class="sc-group-subheader">WEEKLY & REBOOT JOBS</div>
+          </div>
+          <span class="sc-group-badge" id="scPeriodicBadge">0 JOBS</span>
+        </div>
+        <div class="sc-chips" id="scPeriodicChips"></div>
+      </div>
+
+      <!-- Calendar -->
+      <div class="glass sc-cal-card">
+        <div class="sc-cal-top">
+          <div class="sc-cal-title-wrap">
+            <span class="sc-cal-title">CRON TIMELINE</span>
+            <span class="sc-cal-subtitle">Next 7 days</span>
+          </div>
+          <div class="sc-cal-toggle">
+            <button class="sc-cal-btn active" id="scCalWeekBtn" onclick="scSetView('week')">Week</button>
+            <button class="sc-cal-btn" id="scCalMonthBtn" onclick="scSetView('month')">Month</button>
+          </div>
+        </div>
+        <div class="sc-cal-body">
+          <div class="sc-cal-main" id="scCalMain"></div>
+          <div class="sc-cal-legend">
+            <div class="sc-legend-title">LEGEND</div>
+            <div id="scCalLegendInner"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         CONTENT TAB
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="content">
+
+      <!-- Header -->
+      <div class="ct-header">
+        <div class="ct-header-left">
+          <div class="ct-eyebrow">AGENT OUTPUT</div>
+          <div class="ct-heading">Library.</div>
+        </div>
+        <button class="ct-new-btn" onclick="ctToggleNewDoc()">+ New Doc</button>
+      </div>
+
+      <!-- Stats strip -->
+      <div class="ct-stats">
+        <div class="glass ct-stat-card violet">
+          <div class="ct-stat-label">Total Docs</div>
+          <div class="ct-stat-num" id="ctStatTotal">—</div>
+          <div class="ct-stat-sub" id="ctStatTotalSub">—</div>
+        </div>
+        <div class="glass ct-stat-card cyan">
+          <div class="ct-stat-label">Agents Writing</div>
+          <div class="ct-stat-num" id="ctStatAgents">—</div>
+          <div class="ct-stat-sub" id="ctStatAgentsSub">—</div>
+        </div>
+        <div class="glass ct-stat-card mint">
+          <div class="ct-stat-label">Latest</div>
+          <div class="ct-stat-num" id="ctStatLatest" style="font-size:clamp(16px,1.6vw,20px);">—</div>
+          <div class="ct-stat-sub" id="ctStatLatestSub">—</div>
+        </div>
+      </div>
+
+      <!-- New doc form -->
+      <div class="glass ct-new-panel" id="ctNewPanel">
+        <div class="ct-new-row">
+          <select id="ctNewAgent">
+            <option value="orchestrator">Orchestrator</option>
+            <option value="analyst">Analyst</option>
+            <option value="writer" selected>Writer</option>
+            <option value="marketer">Marketer</option>
+            <option value="coder">Coder</option>
+          </select>
+          <input type="text" id="ctNewTitle" placeholder="Document title..." style="flex:1;" />
+        </div>
+        <textarea id="ctNewContent" placeholder="# Title&#10;&#10;Write your content here..."></textarea>
+        <div class="ct-new-btns">
+          <button class="ct-create-btn" onclick="ctCreateDoc()">Create</button>
+          <button class="ct-cancel-btn" onclick="ctToggleNewDoc()">✕</button>
+        </div>
+      </div>
+
+      <!-- Split layout -->
+      <div class="ct-split">
+        <!-- Left: filters + doc list -->
+        <div class="ct-left">
+          <div class="ct-filters" id="ctFilters"></div>
+          <div class="ct-doc-list" id="ctDocList"></div>
+        </div>
+
+        <!-- Right: viewer -->
+        <div class="glass ct-viewer" id="ctViewer">
+          <div class="ct-empty" id="ctEmpty">Select a document to read</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div><!-- /.main -->
+</div><!-- /.app -->
+
+<script>
+  // ═════════════════════════════════════════════════════════════════════════
+  //  GLOBAL STATE
+  // ═════════════════════════════════════════════════════════════════════════
+  let D = null;                    // latest snapshot data
+  let sse = null;                  // SSE connection
+  let pollTimer = null;            // polling fallback timer
+  let sseConnected = false;
+
+  // Agent accent colors
+  const AGENT_COLORS = {
+    orchestrator: '#A78BFA',
+    analyst:      '#7DD3FC',
+    writer:       '#F472B6',
+    marketer:     '#E879F9',
+    coder:        '#A78BFA',
+  };
+
+  function agentColor(name) {
+    return AGENT_COLORS[name?.toLowerCase()] || '#A78BFA';
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  CLOCK
+  // ═════════════════════════════════════════════════════════════════════════
+  const TZ_OFFSET_HOURS = 3; // Sami's timezone: UTC+3
+
+  function tzNow() {
+    // Returns a Date adjusted to UTC+3 for display purposes
+    return new Date(Date.now() + TZ_OFFSET_HOURS * 3600000);
+  }
+
+  function updateClock() {
+    const now = tzNow();
+    const h = String(now.getUTCHours()).padStart(2, '0');
+    const m = String(now.getUTCMinutes()).padStart(2, '0');
+    const s = String(now.getUTCSeconds()).padStart(2, '0');
+    document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  TAB SWITCHING
+  // ═════════════════════════════════════════════════════════════════════════
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById(target).classList.add('active');
+      if (target === 'content') loadContentDocs();
+    });
+  });
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  HELPERS
+  // ═════════════════════════════════════════════════════════════════════════
+  function fmtNum(n) {
+    if (n == null || isNaN(n)) return '—';
+    return Number(n).toLocaleString();
+  }
+
+  function fmtCompact(n) {
+    if (n == null || isNaN(n)) return '—';
+    if (n < 1000) return String(n);
+    if (n < 1e6) return (n / 1e3).toFixed(1) + 'K';
+    if (n < 1e9) return (n / 1e6).toFixed(2) + 'M';
+    return (n / 1e9).toFixed(2) + 'B';
+  }
+
+  function fmtRelative(isoStr) {
+    if (!isoStr) return '—';
+    try {
+      let d = new Date(isoStr);
+      let now = new Date();
+      let diff = (now - d) / 1000;
+      if (diff < 60) return Math.floor(diff) + 's';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h';
+      return Math.floor(diff / 86400) + 'd';
+    } catch { return '—'; }
+  }
+
+  function fmtUptime(secs) {
+    if (!secs || secs <= 0) return '—';
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    return h > 0 ? `${h}h${m}m` : `${m}m`;
+  }
+
+  function truncate(str, n) {
+    if (!str) return '—';
+    return str.length > n ? str.substring(0, n) + '…' : str;
+  }
+
+  function pctColor(pct) {
+    if (pct >= 85) return 'red';
+    if (pct >= 70) return 'amber';
+    return null;
+  }
+
+  function setBar(fillId, pctId, pct, baseColorClass, basePctClass, subId, subText) {
+    const fill = document.getElementById(fillId);
+    const pctEl = document.getElementById(pctId);
+    fill.style.width = Math.min(100, pct) + '%';
+    const danger = pctColor(pct);
+    fill.className = 'health-fill ' + (danger ? 'fill-' + danger : baseColorClass);
+    pctEl.className = 'health-pct ' + (danger ? 'pct-' + danger : basePctClass);
+    pctEl.textContent = pct.toFixed(1) + '%';
+    if (subId && subText != null) document.getElementById(subId).textContent = subText;
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  RADAR — agent dots positioned by response share
+  // ═════════════════════════════════════════════════════════════════════════
+  function renderRadar(agents) {
+    const g = document.getElementById('radarDots');
+    if (!agents || !agents.length) { g.innerHTML = ''; return; }
+
+    const total = agents.reduce((s, a) => s + (a.total || 0), 0) || 1;
+    const cx = 70, cy = 70;
+    const maxR = 58;
+    const minR = 12;
+
+    // Distribute agents around the circle at different angles
+    const angleStep = (2 * Math.PI) / agents.length;
+
+    let html = '';
+    agents.forEach((a, i) => {
+      const share = (a.total || 0) / total;
+      const r = minR + share * (maxR - minR);
+      const angle = i * angleStep - Math.PI / 2; // start at top
+      const x = cx + r * Math.cos(angle);
+      const y = cy + r * Math.sin(angle);
+      const color = agentColor(a.agent_name);
+      html += `<circle class="radar-agent-dot" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="4.5" fill="${color}" style="color:${color}"/>`;
+    });
+    g.innerHTML = html;
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  DIRECTIVE — cycles through recent log entries every 2.6s
+  // ═════════════════════════════════════════════════════════════════════════
+  let directiveIdx = 0;
+  let directiveEntries = [];
+
+  function updateDirectiveEntries(recent) {
+    directiveEntries = (recent || []).map(e => ({
+      text: `${(e.agent_name || '—').toUpperCase()} · ${e.task_description || '—'}`,
+      status: e.status,
+    }));
+    if (directiveIdx >= directiveEntries.length) directiveIdx = 0;
+  }
+
+  function tickDirective() {
+    const el = document.getElementById('directiveText');
+    if (!directiveEntries.length) {
+      el.textContent = 'No recent activity';
+      return;
+    }
+    el.classList.add('fading');
+    setTimeout(() => {
+      const entry = directiveEntries[directiveIdx % directiveEntries.length];
+      el.textContent = entry.text;
+      el.classList.remove('fading');
+      directiveIdx++;
+    }, 400);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  CONTEXT WINDOW — cycles agents every 2.4s
+  // ═════════════════════════════════════════════════════════════════════════
+  let ctxIdx = 0;
+  let ctxAgents = [];
+
+  function updateCtxAgents(agents) {
+    ctxAgents = agents || [];
+    if (ctxIdx >= ctxAgents.length) ctxIdx = 0;
+  }
+
+  function tickContextWindow() {
+    if (!ctxAgents.length) return;
+    const a = ctxAgents[ctxIdx % ctxAgents.length];
+    const total = ctxAgents.reduce((s, x) => s + (x.total || 0), 0) || 1;
+    const share = (a.total || 0) / total;
+    const filledCount = Math.round(share * 16);
+    const color = agentColor(a.agent_name);
+
+    document.getElementById('ctxAgent').textContent = (a.agent_name || '—').toUpperCase();
+    document.getElementById('ctxAgent').style.color = color;
+    document.getElementById('ctxCount').textContent = `${a.total || 0} tasks`;
+
+    // Segments
+    const segContainer = document.getElementById('ctxSegments');
+    let segHtml = '';
+    for (let i = 0; i < 16; i++) {
+      if (i < filledCount) {
+        const delay = (i * 0.1).toFixed(2);
+        segHtml += `<div class="ctx-seg filled" style="background:${color};animation-delay:${delay}s"></div>`;
+      } else {
+        segHtml += `<div class="ctx-seg"></div>`;
+      }
+    }
+    segContainer.innerHTML = segHtml;
+
+    document.getElementById('ctxStatus').textContent = a.last_task ? truncate(a.last_task, 60) : 'idle';
+    ctxIdx++;
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  VPS HEALTH BARS
+  // ═════════════════════════════════════════════════════════════════════════
+  function renderVPS(vps) {
+    if (!vps || vps.error) return;
+
+    setBar('cpuFill', 'cpuPct', vps.cpu_pct || 0, 'fill-cpu', 'pct-cyan');
+
+    setBar('ramFill', 'ramPct', vps.mem_pct || 0, 'fill-ram', 'pct-violet',
+           'ramSub', `${fmtNum(vps.mem_used_mb)} / ${fmtNum(vps.mem_total_mb)} MB`);
+
+    setBar('diskFill', 'diskPct', vps.disk_pct || 0, 'fill-disk', 'pct-mint',
+           'diskSub', `${vps.disk_used_gb} / ${vps.disk_total_gb} GB`);
+
+    document.getElementById('dbSize').textContent = `${vps.db_size_mb || 0} MB`;
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  OPS FOOTER
+  // ═════════════════════════════════════════════════════════════════════════
+  function renderFooter(d) {
+    const kanban = d.kanban || {};
+    const sessions = d.sessions || {};
+    const stats = d.stats || {};
+    const activity = d.activity || {};
+    const gateway = d.gateway || {};
+    const byDay = activity.activity_by_day || [];
+
+    document.getElementById('footQueue').textContent = fmtNum(kanban.total || 0);
+    document.getElementById('footSessions').textContent = fmtNum(sessions.count || 0);
+
+    const errors = stats.failed || 0;
+    const errEl = document.getElementById('footErrors');
+    errEl.textContent = fmtNum(errors);
+    errEl.className = 'ops-footer-val ' + (errors > 0 ? 'red' : 'mint');
+
+    const today = byDay.length ? byDay[byDay.length - 1].total : 0;
+    document.getElementById('footToday').textContent = fmtNum(today);
+
+    document.getElementById('footUptime').textContent = fmtUptime(gateway.uptime_seconds || 0);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  STATS STRIP
+  // ═════════════════════════════════════════════════════════════════════════
+  function renderStats(d) {
+    const stats = d.stats || {};
+    const sessions = d.sessions || {};
+    const sessTotals = sessions.totals || {};
+    const agents = d.agents || [];
+
+    // Integrity = completed / total * 100
+    const total = stats.total || 0;
+    const completed = stats.completed || 0;
+    const integrity = total > 0 ? (completed / total * 100) : 100;
+    const intWhole = Math.floor(integrity);
+    const intDec = (integrity % 1).toFixed(2).substring(1); // ".XX"
+    document.getElementById('statIntegrity').firstChild.textContent = intWhole;
+    document.getElementById('statIntegrityDec').textContent = intDec;
+
+    const responsiveCount = agents.filter(a => (a.total || 0) > 0).length;
+    document.getElementById('statIntegritySub').textContent = `${responsiveCount} of 5 responsive`;
+
+    // Agent Calls
+    document.getElementById('statCalls').textContent = fmtCompact(total);
+    document.getElementById('statCallsSub').textContent = `${completed} completed`;
+
+    // Messages
+    const msgs = sessTotals.messages || 0;
+    document.getElementById('statMessages').textContent = fmtCompact(msgs);
+    document.getElementById('statMessagesSub').textContent = `${sessions.count || 0} sessions`;
+
+    // Tokens In
+    const tokIn = sessTotals.input_tokens || 0;
+    document.getElementById('statTokensIn').textContent = fmtCompact(tokIn);
+    document.getElementById('statTokensInSub').textContent = 'total input';
+
+    // Cache Hits
+    const cacheHits = sessTotals.cache_read_tokens || 0;
+    document.getElementById('statCacheHits').textContent = fmtCompact(cacheHits);
+    document.getElementById('statCacheHitsSub').textContent = 'cache reads';
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  SPARKLINE — 7-day activity, redraws every 900ms
+  // ═════════════════════════════════════════════════════════════════════════
+  function drawSparkline(data) {
+    const canvas = document.getElementById('sparkline');
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    if (!data || !data.length) return;
+
+    const values = data.map(d => d.total || 0);
+    const maxVal = Math.max(...values, 1);
+    const stepX = w / (values.length - 1 || 1);
+
+    // Filled area
+    const grad = ctx.createLinearGradient(0, 0, w, 0);
+    grad.addColorStop(0, 'rgba(139, 92, 246, 0.3)');
+    grad.addColorStop(1, 'rgba(125, 211, 252, 0.3)');
+
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    values.forEach((v, i) => {
+      const x = i * stepX;
+      const y = h - (v / maxVal) * (h - 10) - 5;
+      ctx.lineTo(x, y);
+    });
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Stroke line
+    const strokeGrad = ctx.createLinearGradient(0, 0, w, 0);
+    strokeGrad.addColorStop(0, '#8B5CF6');
+    strokeGrad.addColorStop(1, '#7DD3FC');
+
+    ctx.beginPath();
+    values.forEach((v, i) => {
+      const x = i * stepX;
+      const y = h - (v / maxVal) * (h - 10) - 5;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = strokeGrad;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Glowing dot at rightmost point
+    const lastX = (values.length - 1) * stepX;
+    const lastY = h - (values[values.length - 1] / maxVal) * (h - 10) - 5;
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, 4, 0, 2 * Math.PI);
+    ctx.fillStyle = '#5EE2B5';
+    ctx.shadowColor = '#5EE2B5';
+    ctx.shadowBlur = 10;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Most active day
+    const maxEntry = data.reduce((a, b) => (a.total > b.total ? a : b), data[0]);
+    document.getElementById('sparklineSub').textContent =
+      maxEntry && maxEntry.total > 0 ? `Peak: ${maxEntry.date} (${maxEntry.total})` : 'No activity yet';
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  ACTIVITY FEED — 8 most recent, slides in every 2.2s
+  // ═════════════════════════════════════════════════════════════════════════
+  let feedEntries = [];
+
+  function updateFeedEntries(activity) {
+    feedEntries = (activity || []).slice(0, 8);
+  }
+
+  function renderFeed() {
+    const container = document.getElementById('activityFeed');
+    if (!feedEntries.length) {
+      container.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:20px 0;text-align:center;">No activity yet</div>';
+      return;
+    }
+
+    let html = '';
+    feedEntries.forEach(e => {
+      const color = agentColor(e.agent_name);
+      const status = (e.status || '').toLowerCase();
+      const statusClass = status === 'failed' ? 'fail' : 'done';
+      const statusIcon = status === 'failed' ? '✗' : '✓';
+      html += `<div class="activity-row">
+        <span class="activity-badge" style="background:${color}22;color:${color};">${(e.agent_name || '—').toUpperCase()}</span>
+        <span class="activity-desc">${truncate(e.task_description || '—', 50)}</span>
+        <span class="activity-status ${statusClass}">${statusIcon}</span>
+        <span class="activity-time">${fmtRelative(e.created_at)}</span>
+      </div>`;
+    });
+    container.innerHTML = html;
+  }
+
+  function tickFeed() {
+    if (!feedEntries.length) return;
+    // Rotate: move first to end (simulates a new entry sliding in)
+    // Actually, just re-render to show latest data
+    renderFeed();
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  FULL RENDER — called on every data update
+  // ═════════════════════════════════════════════════════════════════════════
+  function render(d) {
+    D = d;
+    const agents = d.agents || [];
+    const activity = d.activity || {};
+
+    renderRadar(agents);
+    updateDirectiveEntries(activity.activity || activity.recent);
+    updateCtxAgents(agents);
+    renderVPS(d.vps);
+    renderFooter(d);
+    renderStats(d);
+    drawSparkline(activity.activity_by_day);
+    updateFeedEntries(activity.activity || activity.recent);
+    renderFeed();
+
+    // Throughput number
+    document.getElementById('throughputNum').textContent = fmtNum((d.stats || {}).total || 0);
+
+    // Agents tab
+    renderAgentsTab(d);
+
+    // Tasks tab stats (cron data from SSE)
+    if (tkTasks.length >= 0) tkRenderStats();
+
+    // Schedule tab
+    renderScheduleTab(d);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  AGENTS TAB
+  // ═════════════════════════════════════════════════════════════════════════
+
+  const AGENT_META = [
+    { name: 'orchestrator', code: 'ORCH', display: 'Orchestrator', platform: 'telegram',
+      role: 'Top-level system coordinator. Oversees the full multi-agent system, maintains architecture, and resolves conflicts.' },
+    { name: 'analyst',      code: 'ANL',  display: 'Analyst',      platform: 'discord',
+      role: 'Research, trend intelligence, and sourcing. Specializes in deep web research and data analysis.' },
+    { name: 'writer',       code: 'WTR',  display: 'Writer',       platform: 'discord',
+      role: 'Writing, editing, and content shaping. Creates articles, blog posts, and SEO-optimized content.' },
+    { name: 'marketer',     code: 'MKT',  display: 'Marketer',     platform: 'discord',
+      role: 'Marketing strategy, growth, campaigns, and monetization. Drives social media and audience growth.' },
+    { name: 'coder',        code: 'CDR',  display: 'Coder',        platform: 'discord',
+      role: 'Development, automation, integrations, and technical systems. Full-stack web development and API work.' },
+  ];
+
+  let agFilter = 'ALL';
+  let agLogEntries = [];
+
+  function getAgentStatus(lastSeen) {
+    if (!lastSeen) return 'dormant';
+    try {
+      const diff = (Date.now() - new Date(lastSeen).getTime()) / 1000;
+      if (diff < 600) return 'active';   // 10 min
+      if (diff < 21600) return 'idle';  // 6 hours
+      return 'dormant';
+    } catch { return 'dormant'; }
+  }
+
+  function renderAgentsTab(d) {
+    const agents = d.agents || [];
+    if (!agents.length) return;
+
+    const totalResponses = agents.reduce((s, a) => s + (a.total || 0), 0) || 1;
+
+    // Status counts
+    let active = 0, idle = 0, dormant = 0;
+    agents.forEach(a => {
+      const st = getAgentStatus(a.last_seen);
+      if (st === 'active') active++;
+      else if (st === 'idle') idle++;
+      else dormant++;
+    });
+    document.getElementById('agActiveCount').textContent = active;
+    document.getElementById('agIdleCount').textContent = idle;
+    document.getElementById('agDormantCount').textContent = dormant;
+
+    // Agent cards
+    const cardsHtml = AGENT_META.map(meta => {
+      const a = agents.find(x => x.agent_name === meta.name) || { total: 0, completed: 0, failed: 0, daily: [] };
+      const color = agentColor(meta.name);
+      const status = getAgentStatus(a.last_seen);
+      const share = ((a.total || 0) / totalResponses * 100).toFixed(0);
+      const successPct = a.total > 0 ? Math.round((a.completed || 0) / a.total * 100) : 0;
+      const successClass = successPct >= 100 ? 'mint' : successPct >= 80 ? 'amber' : 'red';
+
+      // Mini bar chart
+      const daily = a.daily || [0,0,0,0,0,0,0];
+      const maxDay = Math.max(...daily, 1);
+      const barsHtml = daily.map(v => {
+        const h = Math.max(2, (v / maxDay) * 32);
+        const op = v > 0 ? 0.85 : 0.15;
+        return `<div class="ag-mini-bar" style="height:${h}px;background:${color};opacity:${op}"></div>`;
+      }).join('');
+
+      const statusColor = status === 'active' ? 'var(--mint)' : status === 'idle' ? 'var(--amber)' : 'rgba(255,255,255,0.1)';
+
+      return `<div class="glass ag-card" style="border-top-color:${color}">
+        <div class="ag-card-top">
+          <span class="ag-code-badge" style="background:${color}22;color:${color}">${meta.code}</span>
+          <div class="ag-platform-row">
+            <span class="ag-platform-pill ${meta.platform}">${meta.platform}</span>
+            <span class="ag-status-dot ${status}" style="background:${statusColor}"></span>
+          </div>
+        </div>
+        <div class="ag-name">${meta.display}</div>
+        <div class="ag-role">${meta.role}</div>
+        <div class="ag-chart-label">7-Day Activity</div>
+        <div class="ag-mini-chart">${barsHtml}</div>
+        <div class="ag-stats-row">
+          <div class="ag-stat-cell">
+            <span class="ag-stat-label">Responses</span>
+            <span class="ag-stat-val" style="color:${color}">${a.total || 0}</span>
+          </div>
+          <div class="ag-stat-cell">
+            <span class="ag-stat-label">Success</span>
+            <span class="ag-stat-val ${successClass}">${successPct}%</span>
+          </div>
+          <div class="ag-stat-cell">
+            <span class="ag-stat-label">Model</span>
+            <span class="ag-stat-val muted">${truncate(a.model || '—', 8)}</span>
+          </div>
+        </div>
+        <div class="ag-load-bar"><div class="ag-load-fill" style="width:${share}%;background:${color}"></div></div>
+        <div class="ag-last-task">↳ ${truncate(a.last_task || 'No tasks yet', 38)}</div>
+        <div class="ag-last-time">${fmtRelative(a.last_seen)} ago</div>
+      </div>`;
+    }).join('');
+    document.getElementById('agCards').innerHTML = cardsHtml;
+
+    // Log entries
+    agLogEntries = (d.activity?.activity || d.activity?.recent || []).slice();
+    renderAgLog();
+    renderAgFilters(agents);
+    renderAgStats(d);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  AGENT STATISTICS — stat cards + donut chart
+  // ═════════════════════════════════════════════════════════════════════════
+
+  // Canvas colors (hex, not CSS vars — canvas can't resolve var())
+  const AGENT_CANVAS_COLORS = {
+    orchestrator: '#A78BFA',
+    analyst:      '#7DD3FC',
+    writer:       '#F472B6',
+    marketer:     '#FBBF24',
+    coder:        '#E879F9',
+  };
+
+  function renderAgStats(d) {
+    const byDay = d.activity?.activity_by_day || [];
+    const agents = d.agents || [];
+    const stats = d.stats || {};
+
+    // Tasks today — last entry in activity_by_day
+    const todayCount = byDay.length ? byDay[byDay.length - 1].total : 0;
+    document.getElementById('agStatToday').textContent = todayCount;
+    const todayBar = document.getElementById('agStatTodayBar');
+    todayBar.style.width = '100%';
+    todayBar.className = 'ag-stat-tile-fill fill-amber';
+
+    // Tasks this week — sum of all 7 entries
+    const weekTotal = byDay.reduce((s, x) => s + (x.total || 0), 0);
+    document.getElementById('agStatWeek').textContent = weekTotal;
+    const weekBar = document.getElementById('agStatWeekBar');
+    weekBar.style.width = '100%';
+    weekBar.className = 'ag-stat-tile-fill fill-cyan';
+
+    // Most active agent — highest total across agents
+    let mostActive = null;
+    let maxCount = 0;
+    agents.forEach(a => {
+      if ((a.total || 0) > maxCount) {
+        maxCount = a.total || 0;
+        mostActive = a;
+      }
+    });
+    const maEl = document.getElementById('agStatMostActive');
+    const maBar = document.getElementById('agStatMostActiveBar');
+    if (mostActive) {
+      maEl.textContent = mostActive.agent_name.charAt(0).toUpperCase() + mostActive.agent_name.slice(1);
+      maEl.style.color = agentColor(mostActive.agent_name);
+      const share = weekTotal > 0 ? (maxCount / weekTotal * 100) : 0;
+      maBar.style.width = share + '%';
+      maBar.style.background = agentColor(mostActive.agent_name);
+    } else {
+      maEl.textContent = '—';
+      maBar.style.width = '0%';
+    }
+
+    // Success rate
+    const total = stats.total || 0;
+    const completed = stats.completed || 0;
+    const successPct = total > 0 ? Math.round(completed / total * 100) : 0;
+    document.getElementById('agStatSuccess').textContent = successPct + '%';
+    const successBar = document.getElementById('agStatSuccessBar');
+    successBar.style.width = successPct + '%';
+    successBar.className = 'ag-stat-tile-fill ' + (successPct >= 90 ? 'fill-mint' : successPct >= 70 ? 'fill-amber' : 'fill-red');
+
+    // Donut chart
+    drawAgentDonut(agents);
+  }
+
+  function drawAgentDonut(agents) {
+    const canvas = document.getElementById('agDonut');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    const cx = w / 2;
+    const cy = h / 2;
+    const outerR = 52;
+    const innerR = 32;
+
+    ctx.clearRect(0, 0, w, h);
+
+    const total = agents.reduce((s, a) => s + (a.total || 0), 0);
+
+    if (total === 0) {
+      // Draw a faint placeholder circle
+      ctx.beginPath();
+      ctx.arc(cx, cy, outerR, 0, 2 * Math.PI);
+      ctx.arc(cx, cy, innerR, 0, 2 * Math.PI, true);
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      ctx.fill();
+    } else {
+      // Draw slices
+      let startAngle = -Math.PI / 2;
+      agents.forEach(a => {
+        const count = a.total || 0;
+        if (count === 0) return;
+        const sliceAngle = (count / total) * 2 * Math.PI;
+        const endAngle = startAngle + sliceAngle;
+        const color = AGENT_CANVAS_COLORS[a.agent_name?.toLowerCase()] || '#A78BFA';
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerR, startAngle, endAngle);
+        ctx.arc(cx, cy, innerR, endAngle, startAngle, true);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+
+        startAngle = endAngle;
+      });
+    }
+
+    // Center text — grand total
+    ctx.fillStyle = '#F4F4F8';
+    ctx.font = 'bold 18px "Inter Tight", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(total), cx, cy - 6);
+
+    ctx.font = '10px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#8A8A9B';
+    ctx.fillText('TOTAL', cx, cy + 10);
+
+    // Legend
+    const legendHtml = agents.map(a => {
+      const count = a.total || 0;
+      const pct = total > 0 ? Math.round(count / total * 100) : 0;
+      const color = AGENT_CANVAS_COLORS[a.agent_name?.toLowerCase()] || '#A78BFA';
+      const name = a.agent_name ? (a.agent_name.charAt(0).toUpperCase() + a.agent_name.slice(1)) : '—';
+      return `<div class="ag-legend-row">
+        <span class="ag-legend-dot" style="background:${color}"></span>
+        <span class="ag-legend-name">${name}</span>
+        <span class="ag-legend-pct">${pct}%</span>
+      </div>`;
+    }).join('');
+    document.getElementById('agDonutLegend').innerHTML = legendHtml;
+  }
+
+  function renderAgFilters(agents) {
+    const filters = ['ALL', ...AGENT_META.map(m => m.code)];
+    const html = filters.map(f => {
+      const isActive = agFilter === f;
+      return `<button class="ag-filter-btn ${isActive ? 'active' : ''}" onclick="setAgFilter('${f}')">${f}</button>`;
+    }).join('');
+    document.getElementById('agFilters').innerHTML = html;
+  }
+
+  function setAgFilter(f) {
+    agFilter = f;
+    renderAgLog();
+    // Re-render filter buttons to update active state
+    const agents = D ? (D.agents || []) : [];
+    renderAgFilters(agents);
+  }
+
+  function renderAgLog() {
+    let entries = agLogEntries;
+    if (agFilter !== 'ALL') {
+      const meta = AGENT_META.find(m => m.code === agFilter);
+      if (meta) {
+        entries = entries.filter(e => e.agent_name === meta.name);
+      }
+    }
+
+    document.getElementById('agLogCount').textContent = `${entries.length} entries`;
+
+    if (!entries.length) {
+      document.getElementById('agLogBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No entries</td></tr>';
+      return;
+    }
+
+    const html = entries.map(e => {
+      const color = agentColor(e.agent_name);
+      const status = (e.status || '').toLowerCase();
+      const statusClass = status === 'failed' ? 'fail' : 'done';
+      const statusLabel = status === 'failed' ? 'Failed' : 'Done';
+      return `<tr>
+        <td style="color:var(--muted)">${fmtRelative(e.created_at)}</td>
+        <td style="color:${color};font-weight:600">${(e.agent_name || '—').toUpperCase()}</td>
+        <td style="color:var(--text);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${truncate(e.task_description || '—', 60)}</td>
+        <td style="color:var(--muted)">${truncate(e.model_used || '—', 12)}</td>
+        <td><span class="ag-log-status ${statusClass}">${statusLabel}</span></td>
+      </tr>`;
+    }).join('');
+    document.getElementById('agLogBody').innerHTML = html;
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  TASKS TAB — board, drag-drop, add form, stats, cron countdown
+  // ═════════════════════════════════════════════════════════════════════════
+
+  let tkTasks = [];
+  let tkDraggedId = null;
+
+  async function tkLoadBoard() {
+    try {
+      const resp = await fetch('/api/board');
+      const data = await resp.json();
+      tkTasks = data.tasks || [];
+      tkRenderBoard();
+      tkRenderStats();
+    } catch (e) { console.error('Board load error:', e); }
+  }
+
+  function tkRenderBoard() {
+    const cols = {
+      pending: document.getElementById('tkColPending'),
+      in_progress: document.getElementById('tkColInProgress'),
+      completed: document.getElementById('tkColDone'),
+    };
+    const counts = { pending: 0, in_progress: 0, completed: 0 };
+
+    // Clear
+    Object.values(cols).forEach(c => c.innerHTML = '');
+
+    // Sort by created_at desc
+    const sorted = [...tkTasks].sort((a, b) =>
+      (b.created_at || '').localeCompare(a.created_at || '')
+    );
+
+    sorted.forEach(t => {
+      const status = t.status || 'pending';
+      if (!cols[status]) return;
+      counts[status]++;
+
+      const pri = t.priority || 'medium';
+      const time = fmtRelative(t.created_at);
+
+      const card = document.createElement('div');
+      card.className = 'glass tk-task';
+      card.draggable = true;
+      card.dataset.id = t.id;
+      card.innerHTML = `
+        <div class="tk-task-top">
+          <span class="tk-task-title">${escHtml(t.title)}</span>
+          <button class="tk-task-del" onclick="tkDelete('${t.id}')">✕</button>
+        </div>
+        <div class="tk-task-bottom">
+          <span class="tk-priority-dot ${pri}"></span>
+          <span class="tk-task-time">${time} ago</span>
+        </div>
+      `;
+
+      // Drag events
+      card.addEventListener('dragstart', (e) => {
+        tkDraggedId = t.id;
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        tkDraggedId = null;
+        // Remove all drag-over highlights
+        document.querySelectorAll('.tk-col-body').forEach(b => b.classList.remove('drag-over'));
+      });
+
+      cols[status].appendChild(card);
+    });
+
+    // Empty states
+    Object.entries(cols).forEach(([status, col]) => {
+      if (counts[status] === 0) {
+        col.innerHTML = '<div class="tk-empty">DROP HERE</div>';
+      }
+    });
+
+    // Update counts
+    document.getElementById('tkCountPending').textContent = counts.pending;
+    document.getElementById('tkCountInProgress').textContent = counts.in_progress;
+    document.getElementById('tkCountDone').textContent = counts.completed;
+
+    // Column pills
+    const pillsHtml = [
+      { label: 'Pending', count: counts.pending, color: 'amber' },
+      { label: 'In Progress', count: counts.in_progress, color: 'cyan' },
+      { label: 'Done', count: counts.completed, color: 'mint' },
+    ].map(p => {
+      const colorStyle = p.count > 0 ? `color:var(--${p.color})` : 'color:var(--muted)';
+      return `<span class="tk-col-pill" style="${colorStyle}">${p.label}<span class="count">${p.count}</span></span>`;
+    }).join('');
+    document.getElementById('tkColPills').innerHTML = pillsHtml;
+  }
+
+  function tkRenderStats() {
+    const total = tkTasks.length;
+    const done = tkTasks.filter(t => t.status === 'completed').length;
+    const inProg = tkTasks.filter(t => t.status === 'in_progress').length;
+
+    document.getElementById('tkStatTotal').textContent = total;
+    document.getElementById('tkStatTotalSub').textContent = `${done} done · ${inProg} active`;
+
+    // Cron stats from SSE data
+    const crons = (D && D.crons) || (D && D.cron && D.cron.jobs) || [];
+    document.getElementById('tkStatCron').textContent = crons.length;
+    const hermesCrons = crons.filter(c => c.label === 'hermes');
+    document.getElementById('tkStatCronSub').textContent = `${hermesCrons.length} hermes · ${crons.length - hermesCrons.length} system`;
+
+    document.getElementById('tkStatDone').textContent = done;
+    const doneSub = document.getElementById('tkStatDoneSub');
+    if (inProg > 0) {
+      doneSub.textContent = `${inProg} in progress`;
+      doneSub.className = 'tk-stat-sub cyan';
+    } else {
+      doneSub.textContent = '0 in progress';
+      doneSub.className = 'tk-stat-sub';
+    }
+
+    // Next cron countdown
+    tkUpdateNextCron(crons);
+  }
+
+  function tkUpdateNextCron(crons) {
+    if (!crons || !crons.length) {
+      document.getElementById('tkStatNextCron').textContent = '—';
+      document.getElementById('tkStatNextCronSub').textContent = 'No cron jobs';
+      return;
+    }
+
+    const now = new Date();
+    let nearest = null;
+    let nearestDiff = Infinity;
+
+    crons.forEach(c => {
+      const next = tkNextFireTime(c.schedule, now);
+      if (next) {
+        const diff = next - now;
+        if (diff > 0 && diff < nearestDiff) {
+          nearestDiff = diff;
+          nearest = { time: next, job: c };
+        }
+      }
+    });
+
+    if (!nearest) {
+      document.getElementById('tkStatNextCron').textContent = '—';
+      document.getElementById('tkStatNextCronSub').textContent = 'Unable to parse';
+      return;
+    }
+
+    const h = Math.floor(nearestDiff / 3600000);
+    const m = Math.floor((nearestDiff % 3600000) / 60000);
+    const countdown = h > 0 ? `in ${h}h ${m}m` : `in ${m}m`;
+    document.getElementById('tkStatNextCron').textContent = countdown;
+
+    // Job name: first word of command or english
+    const jobName = nearest.job.english || nearest.job.command?.split(/\s/)[0] || '—';
+    document.getElementById('tkStatNextCronSub').textContent = truncate(jobName, 25);
+  }
+
+  function tkNextFireTime(schedule, now) {
+    // Parse 5-field cron: min hour dom month dow
+    const parts = schedule.trim().split(/\s+/);
+    if (parts.length < 5) return null;
+    const [minF, hourF, domF, monthF, dowF] = parts;
+
+    // Simple parser: handle *, specific values, and */N
+    function parseField(field, min, max) {
+      if (field === '*') return null; // any
+      if (field.startsWith('*/')) {
+        const step = parseInt(field.slice(2));
+        const vals = [];
+        for (let v = min; v <= max; v += step) vals.push(v);
+        return vals;
+      }
+      return field.split(',').map(v => parseInt(v)).filter(v => !isNaN(v));
+    }
+
+    const mins = parseField(minF, 0, 59);
+    const hours = parseField(hourF, 0, 23);
+    const doms = parseField(domF, 1, 31);
+    const months = parseField(monthF, 1, 12);
+    const dows = parseField(dowF, 0, 6);
+
+    // Brute-force: check every minute from now up to 7 days ahead
+    const test = new Date(now);
+    test.setSeconds(0, 0);
+    test.setMinutes(test.getMinutes() + 1);
+
+    for (let i = 0; i < 10080; i++) { // 7 days = 10080 minutes
+      // Cron runs in UTC on the VPS — compare against UTC time values
+      const m = test.getUTCMinutes();
+      const h = test.getUTCHours();
+      const dom = test.getUTCDate();
+      const month = test.getUTCMonth() + 1;
+      const dow = test.getUTCDay();
+
+      const mOk = !mins || mins.includes(m);
+      const hOk = !hours || hours.includes(h);
+      const domOk = !doms || doms.includes(dom);
+      const monthOk = !months || months.includes(month);
+      const dowOk = !dows || dows.includes(dow);
+
+      if (mOk && hOk && domOk && monthOk && dowOk) return new Date(test);
+      test.setMinutes(test.getMinutes() + 1);
+    }
+    return null;
+  }
+
+  // Drag-drop on columns
+  function tkSetupDragDrop() {
+    document.querySelectorAll('.tk-col-body').forEach(col => {
+      col.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        col.classList.add('drag-over');
+      });
+      col.addEventListener('dragleave', () => {
+        col.classList.remove('drag-over');
+      });
+      col.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        col.classList.remove('drag-over');
+        if (!tkDraggedId) return;
+        const newStatus = col.dataset.status;
+        await tkUpdateTask(tkDraggedId, { status: newStatus });
+      });
+    });
+  }
+
+  async function tkUpdateTask(id, fields) {
+    try {
+      await fetch(`/api/board/update?id=${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fields)
+      });
+      await tkLoadBoard();
+    } catch (e) { console.error('Update error:', e); }
+  }
+
+  async function tkDelete(id) {
+    try {
+      await fetch(`/api/board/delete?id=${id}`, { method: 'POST' });
+      await tkLoadBoard();
+    } catch (e) { console.error('Delete error:', e); }
+  }
+
+  function toggleAddForm() {
+    const panel = document.getElementById('tkAddPanel');
+    const trigger = document.getElementById('tkAddTrigger');
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) {
+      trigger.textContent = '✕ Close';
+      document.getElementById('tkNewTitle').focus();
+    } else {
+      trigger.textContent = '+ Add Task';
+    }
+  }
+
+  async function submitAddForm() {
+    const title = document.getElementById('tkNewTitle').value.trim();
+    if (!title) return;
+    const priority = document.getElementById('tkNewPriority').value;
+    const status = document.getElementById('tkNewColumn').value;
+
+    try {
+      await fetch('/api/board', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, priority, status })
+      });
+      document.getElementById('tkNewTitle').value = '';
+      toggleAddForm();
+      await tkLoadBoard();
+    } catch (e) { console.error('Add error:', e); }
+  }
+
+  function escHtml(s) {
+    if (!s) return '';
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // Update cron countdown every minute
+  setInterval(() => {
+    if (D) tkUpdateNextCron(D.crons || (D.cron && D.cron.jobs) || []);
+  }, 60000);
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  SCHEDULE TAB — job groups, calendar week/month, legend
+  // ═════════════════════════════════════════════════════════════════════════
+
+  const SC_PALETTE = ['#5EE2B5', '#7DD3FC', '#F5B544', '#A78BFA', '#F472B6', '#E879F9', '#FBBF24', '#F26D6D'];
+  let scColorMap = {};
+  let scView = 'week';
+
+  function scAssignColors(crons) {
+    // Assign stable colors to unique job names
+    const names = [...new Set(crons.map(c => c.name || 'unknown'))];
+    names.forEach((name, i) => {
+      if (!scColorMap[name]) {
+        scColorMap[name] = SC_PALETTE[i % SC_PALETTE.length];
+      }
+    });
+  }
+
+  function scGetFireTime(job) {
+    // Parse the cron schedule and return the fire time in minutes (0-1439)
+    // Cron runs in UTC on the VPS — convert to UTC+3 for display
+    const parts = (job.schedule || '').trim().split(/\s+/);
+    if (parts.length < 5) return null;
+    const [minF, hourF] = parts;
+
+    // For * in hour, use the first hour (0). For ranges/steps, use first value.
+    function firstVal(field, max) {
+      if (field === '*') return 0;
+      if (field.startsWith('*/')) return 0;
+      if (field.includes('-')) return parseInt(field.split('-')[0]);
+      if (field.includes(',')) return parseInt(field.split(',')[0]);
+      return parseInt(field) || 0;
+    }
+
+    const minute = firstVal(minF, 59);
+    const hour = firstVal(hourF, 23);
+    // Convert UTC cron time to UTC+3 display time
+    let displayHour = (hour + TZ_OFFSET_HOURS) % 24;
+    return displayHour * 60 + minute;
+  }
+
+  function scIsDaily(job) {
+    const [minF, hourF, domF, monthF, dowF] = (job.schedule || '').trim().split(/\s+/);
+    return domF === '*' && monthF === '*' && (hourF !== '*' || minF !== '*');
+  }
+
+  function scIsMonthly(job) {
+    const [minF, hourF, domF, monthF, dowF] = (job.schedule || '').trim().split(/\s+/);
+    return domF !== '*' && domF !== '*/' && monthF === '*' && dowF === '*';
+  }
+
+  function scIsWeekly(job) {
+    const [minF, hourF, domF, monthF, dowF] = (job.schedule || '').trim().split(/\s+/);
+    return domF === '*' && monthF === '*' && dowF !== '*';
+  }
+
+  function renderScheduleTab(d) {
+    const crons = d.crons || (d.cron && d.cron.jobs) || [];
+    if (!crons.length) return;
+
+    scAssignColors(crons);
+
+    // Stats
+    const hermes = crons.filter(c => c.label === 'hermes');
+    const system = crons.filter(c => c.label === 'system');
+    document.getElementById('scStatTotal').textContent = crons.length;
+    document.getElementById('scStatTotalSub').textContent = 'cron entries tracked';
+    document.getElementById('scStatHermes').textContent = hermes.length;
+    document.getElementById('scStatHermesSub').textContent = 'hermes automation';
+    document.getElementById('scStatSystem').textContent = system.length;
+    document.getElementById('scStatSystemSub').textContent = 'os / maintenance';
+
+    // Next run countdown
+    const now = new Date();
+    let nearest = null, nearestDiff = Infinity;
+    crons.forEach(c => {
+      const next = tkNextFireTime(c.schedule, now);
+      if (next) {
+        const diff = next - now;
+        if (diff > 0 && diff < nearestDiff) { nearestDiff = diff; nearest = { time: next, job: c }; }
+      }
+    });
+    if (nearest) {
+      const h = Math.floor(nearestDiff / 3600000);
+      const m = Math.floor((nearestDiff % 3600000) / 60000);
+      const cd = h > 0 ? `in ${h}h ${m}m` : `in ${m}m`;
+      const jobName = nearest.job.name || nearest.job.english || '—';
+      document.getElementById('scStatNext').textContent = cd;
+      document.getElementById('scStatNextSub').textContent = truncate(jobName, 20);
+      // Countdown card in header
+      document.getElementById('scCdTop').textContent = `CD · ${cd.toUpperCase()}`;
+      document.getElementById('scCdVal').textContent = cd;
+    }
+
+    // Job group chips
+    const daily = crons.filter(c => scIsDaily(c) && !scIsWeekly(c));
+    const monthly = crons.filter(c => scIsMonthly(c));
+    const periodic = crons.filter(c => scIsWeekly(c) || (!scIsDaily(c) && !scIsMonthly(c)));
+
+    // Update job count badges
+    document.getElementById('scDailyBadge').textContent = `${daily.length} JOBS`;
+    document.getElementById('scMonthlyBadge').textContent = `${monthly.length} JOBS`;
+    document.getElementById('scPeriodicBadge').textContent = `${periodic.length} JOBS`;
+
+    function renderChips(jobs, containerId) {
+      const html = jobs.map(c => {
+        const color = scColorMap[c.name || 'unknown'] || '#A78BFA';
+        const fireTime = scGetFireTime(c);
+        const timeStr = fireTime != null
+          ? `${String(Math.floor(fireTime / 60)).padStart(2, '0')}:${String(fireTime % 60).padStart(2, '0')}`
+          : c.english || '—';
+        return `<div class="sc-chip" style="border-left-color:${color}" title="${escHtml(c.command || '')}">
+          <span class="sc-chip-time" style="color:${color}">${timeStr}</span>
+          <div class="sc-chip-body">
+            <span class="sc-chip-name">${escHtml(c.name || '—')}</span>
+            <span class="sc-chip-desc">${escHtml(c.detail || c.english || '—')}</span>
+          </div>
+        </div>`;
+      }).join('');
+      document.getElementById(containerId).innerHTML = html || '<div style="color:var(--muted);font-size:11px;padding:4px 0;">None</div>';
+    }
+
+    renderChips(daily, 'scDailyChips');
+    renderChips(monthly, 'scMonthlyChips');
+    renderChips(periodic, 'scPeriodicChips');
+
+    // Calendar
+    scRenderCalendar(crons);
+  }
+
+  function scSetView(view) {
+    scView = view;
+    document.getElementById('scCalWeekBtn').classList.toggle('active', view === 'week');
+    document.getElementById('scCalMonthBtn').classList.toggle('active', view === 'month');
+    const crons = D ? (D.crons || (D.cron && D.cron.jobs) || []) : [];
+    scRenderCalendar(crons);
+  }
+
+  function scRenderCalendar(crons) {
+    if (scView === 'week') scRenderWeek(crons);
+    else scRenderMonth(crons);
+    scRenderLegend(crons);
+  }
+
+  function scRenderWeek(crons) {
+    const now = new Date();
+    const today = now.getDay();
+    const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    const dayOrder = [];
+    for (let i = 0; i < 7; i++) dayOrder.push((today + i) % 7);
+
+    // Get today's date number
+    const todayDate = now.getDate();
+
+    let html = '<div class="sc-week">';
+    dayOrder.forEach(dow => {
+      const dayName = dayNames[dow];
+      const isToday = dow === today;
+
+      // Find jobs that run on this day of week
+      const dayJobs = crons.filter(c => {
+        const parts = (c.schedule || '').trim().split(/\s+/);
+        if (parts.length < 5) return false;
+        const dowF = parts[4];
+        if (dowF === '*') return true;
+        if (dowF.includes(',')) return dowF.split(',').map(d => parseInt(d)).includes(dow);
+        if (dowF === '7') return dow === 0;
+        return parseInt(dowF) === dow;
+      });
+
+      // Calculate date for this day
+      const dayOffset = (dow - today + 7) % 7;
+      const dayDate = new Date(now);
+      dayDate.setDate(dayDate.getDate() + dayOffset);
+      const dateNum = dayDate.getDate();
+
+      const rowClass = isToday ? 'sc-week-row today-row' : 'sc-week-row';
+      const circleClass = isToday ? 'sc-week-circle today' : 'sc-week-circle';
+      const barClass = isToday ? 'sc-week-bar today-bar' : 'sc-week-bar';
+
+      // Dots
+      let dotsHtml = '';
+      dayJobs.forEach(c => {
+        const fireTime = scGetFireTime(c);
+        if (fireTime != null) {
+          const pct = (fireTime / 1440) * 100;
+          const color = scColorMap[c.name || 'unknown'] || '#A78BFA';
+          dotsHtml += `<div class="sc-week-dot" style="left:${pct}%;background:${color};color:${color}"></div>`;
+        }
+      });
+
+      // Now line for today
+      let nowLineHtml = '';
+      if (isToday) {
+        const tz = tzNow();
+        const nowPct = ((tz.getUTCHours() * 60 + tz.getUTCMinutes()) / 1440) * 100;
+        nowLineHtml = `<div class="sc-week-now-line" style="left:${nowPct}%"></div>
+          <div class="sc-week-now-dot" style="left:${nowPct}%"></div>`;
+      }
+
+      html += `<div class="${rowClass}">
+        <div class="sc-week-day">
+          <div class="${circleClass}">${dateNum}</div>
+          <span class="sc-week-daylabel">${dayName}</span>
+        </div>
+        <div class="${barClass}">${dotsHtml}${nowLineHtml}</div>
+      </div>`;
+    });
+
+    // Axis labels
+    html += '<div class="sc-week-axis">';
+    ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'].forEach(label => {
+      html += `<span class="sc-week-axis-label">${label}</span>`;
+    });
+    html += '</div></div>';
+
+    document.getElementById('scCalMain').innerHTML = html;
+  }
+
+  function scRenderMonth(crons) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const today = now.getDate();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDow = (firstDay.getDay() + 6) % 7; // Mon = 0
+    const daysInMonth = lastDay.getDate();
+    const dayNames = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+
+    let html = '<div class="sc-month">';
+    html += '<div class="sc-month-header">';
+    dayNames.forEach(d => html += `<div class="sc-month-dow">${d}</div>`);
+    html += '</div><div class="sc-month-grid">';
+
+    // Empty cells before day 1
+    for (let i = 0; i < startDow; i++) html += '<div class="sc-month-cell empty"></div>';
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dow = (new Date(year, month, day).getDay() + 6) % 7; // Mon = 0
+      const isToday = day === today;
+
+      // Find jobs for this day
+      const dayJobs = crons.filter(c => {
+        const parts = (c.schedule || '').trim().split(/\s+/);
+        if (parts.length < 5) return false;
+        const [minF, hourF, domF, monthF, dowF] = parts;
+        // Check day of month
+        const domOk = domF === '*' || parseInt(domF) === day;
+        // Check month
+        const monthOk = monthF === '*' || parseInt(monthF) === (month + 1);
+        // Check day of week (0=Sun in cron, convert)
+        const cronDow = new Date(year, month, day).getDay();
+        const dowOk = dowF === '*' || parseInt(dowF) === cronDow || (dowF === '7' && cronDow === 0);
+        return domOk && monthOk && dowOk;
+      });
+
+      let dotsHtml = '';
+      dayJobs.forEach(c => {
+        const color = scColorMap[c.name || 'unknown'] || '#A78BFA';
+        dotsHtml += `<div class="sc-month-dot" style="background:${color}"></div>`;
+      });
+
+      const cellClass = isToday ? 'sc-month-cell today' : 'sc-month-cell';
+      const numClass = isToday ? 'sc-month-num today' : 'sc-month-num';
+
+      html += `<div class="${cellClass}">
+        <div class="${numClass}">${day}</div>
+        ${dotsHtml ? `<div class="sc-month-dots">${dotsHtml}</div>` : ''}
+      </div>`;
+    }
+
+    html += '</div></div>';
+    document.getElementById('scCalMain').innerHTML = html;
+  }
+
+  function scRenderLegend(crons) {
+    const seen = new Set();
+    const entries = [];
+    crons.forEach(c => {
+      const name = c.name || 'unknown';
+      if (seen.has(name)) return;
+      seen.add(name);
+      const color = scColorMap[name] || '#A78BFA';
+      const fireTime = scGetFireTime(c);
+      const timeStr = fireTime != null
+        ? `${String(Math.floor(fireTime / 60)).padStart(2, '0')}:${String(fireTime % 60).padStart(2, '0')}`
+        : '—';
+      entries.push({ color, timeStr, name });
+    });
+
+    const html = entries.map(e => {
+      return `<div class="sc-legend-entry">
+        <span class="sc-legend-dot" style="background:${e.color}"></span>
+        <span class="sc-legend-time" style="color:${e.color}">${e.timeStr}</span>
+        <span class="sc-legend-name">${escHtml(e.name)}</span>
+      </div>`;
+    }).join('');
+    document.getElementById('scCalLegendInner').innerHTML = html;
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  CONTENT TAB — library, doc list, viewer, editor
+  // ═════════════════════════════════════════════════════════════════════════
+
+  let ctDocs = [];
+  let ctFilter = 'all';
+  let ctSelected = null;  // {agent, filename}
+  let ctEditMode = false;
+
+  async function loadContentDocs() {
+    try {
+      const resp = await fetch('/api/content');
+      ctDocs = await resp.json();
+      ctRenderStats();
+      ctRenderFilters();
+      ctRenderDocList();
+      // Auto-select first doc
+      if (ctDocs.length && !ctSelected) {
+        ctSelectDoc(ctDocs[0].agent, ctDocs[0].filename);
+      }
+    } catch (e) { console.error('Content load error:', e); }
+  }
+
+  function ctRenderStats() {
+    document.getElementById('ctStatTotal').textContent = ctDocs.length;
+    const agents = [...new Set(ctDocs.map(d => d.agent))];
+    document.getElementById('ctStatAgents').textContent = agents.length;
+    document.getElementById('ctStatAgentsSub').textContent = agents.join(', ') || '—';
+    if (ctDocs.length) {
+      const latest = ctDocs[0];
+      document.getElementById('ctStatLatest').textContent = truncate(latest.title, 25);
+      document.getElementById('ctStatLatestSub').textContent = `${latest.agent} · ${fmtRelative(latest.modified_at)}`;
+    } else {
+      document.getElementById('ctStatLatest').textContent = '—';
+      document.getElementById('ctStatLatestSub').textContent = 'no documents yet';
+    }
+    document.getElementById('ctStatTotalSub').textContent = ctDocs.length === 1 ? '1 document' : `${ctDocs.length} documents`;
+  }
+
+  function ctRenderFilters() {
+    const filters = ['all', 'orchestrator', 'analyst', 'writer', 'marketer', 'coder'];
+    const html = filters.map(f => {
+      const label = f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1);
+      const isActive = ctFilter === f;
+      return `<button class="ct-filter-pill ${isActive ? 'active' : ''}" onclick="ctSetFilter('${f}')">${label}</button>`;
+    }).join('');
+    document.getElementById('ctFilters').innerHTML = html;
+  }
+
+  function ctSetFilter(f) {
+    ctFilter = f;
+    ctRenderFilters();
+    ctRenderDocList();
+  }
+
+  function ctRenderDocList() {
+    const filtered = ctFilter === 'all' ? ctDocs : ctDocs.filter(d => d.agent === ctFilter);
+    if (!filtered.length) {
+      document.getElementById('ctDocList').innerHTML = '<div style="color:var(--muted);font-size:11px;padding:12px;text-align:center;">No documents</div>';
+      return;
+    }
+    const html = filtered.map(d => {
+      const color = agentColor(d.agent);
+      const isActive = ctSelected && ctSelected.agent === d.agent && ctSelected.filename === d.filename;
+      return `<div class="ct-doc-item ${isActive ? 'active' : ''}" onclick="ctSelectDoc('${d.agent}','${d.filename}')">
+        <div class="ct-doc-item-top">
+          <span class="ct-doc-badge" style="background:${color}22;color:${color}">${d.agent}</span>
+          <span class="ct-doc-title">${escHtml(d.title)}</span>
+        </div>
+        <span class="ct-doc-time">${fmtRelative(d.modified_at)} ago</span>
+      </div>`;
+    }).join('');
+    document.getElementById('ctDocList').innerHTML = html;
+  }
+
+  async function ctSelectDoc(agent, filename) {
+    ctSelected = { agent, filename };
+    ctEditMode = false;
+    ctRenderDocList();  // update active highlight
+    try {
+      const resp = await fetch(`/api/content/read?agent=${agent}&file=${filename}`);
+      const data = await resp.json();
+      if (data.error) {
+        ctShowError(data.error);
+        return;
+      }
+      ctRenderViewer(agent, filename, data.text);
+    } catch (e) { ctShowError(e.message); }
+  }
+
+  function ctRenderViewer(agent, filename, text) {
+    const doc = ctDocs.find(d => d.agent === agent && d.filename === filename);
+    const title = doc ? doc.title : filename;
+    const modTime = doc ? doc.modified_at : '';
+    const color = agentColor(agent);
+
+    // Parse date from filename (YYYY-MM-DD_...)
+    let dateStr = '';
+    const match = filename.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) dateStr = match[1];
+
+    const viewer = document.getElementById('ctViewer');
+    viewer.innerHTML = `
+      <div class="ct-viewer-header">
+        <span class="ct-doc-badge" style="background:${color}22;color:${color}">${agent}</span>
+        <span class="ct-viewer-date">${dateStr}</span>
+        <span class="ct-viewer-title">${escHtml(title)}</span>
+        <div class="ct-viewer-actions">
+          <button class="ct-action-btn edit" onclick="ctEnterEdit()">Edit</button>
+          <button class="ct-action-btn" onclick="ctDownload()">↓</button>
+          <button class="ct-action-btn del" onclick="ctDeleteDoc()">✕</button>
+        </div>
+      </div>
+      <div class="ct-body" id="ctBody"></div>
+    `;
+
+    // Render markdown
+    const bodyEl = document.getElementById('ctBody');
+    if (typeof marked !== 'undefined') {
+      bodyEl.innerHTML = marked.parse(text);
+    } else {
+      bodyEl.textContent = text;
+    }
+
+    // Store raw text for edit mode
+    ctRawText = text;
+  }
+
+  let ctRawText = '';
+
+  function ctEnterEdit() {
+    ctEditMode = true;
+    const viewer = document.getElementById('ctViewer');
+    viewer.innerHTML = `
+      <div class="ct-viewer-header">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:2px;">Editing</span>
+        <div class="ct-viewer-actions" style="margin-left:auto;">
+          <button class="ct-action-btn" style="color:var(--mint);border-color:rgba(94,226,181,0.3);" onclick="ctSaveEdit()">Save</button>
+          <button class="ct-action-btn" onclick="ctCancelEdit()">Cancel</button>
+        </div>
+      </div>
+      <textarea class="ct-editor" id="ctEditorArea">${escHtml(ctRawText)}</textarea>
+    `;
+  }
+
+  async function ctSaveEdit() {
+    const newText = document.getElementById('ctEditorArea').value;
+    if (!ctSelected) return;
+    try {
+      await fetch(`/api/content/save?agent=${ctSelected.agent}&file=${ctSelected.filename}`, {
+        method: 'POST',
+        body: newText
+      });
+      ctEditMode = false;
+      await loadContentDocs();
+      ctSelectDoc(ctSelected.agent, ctSelected.filename);
+    } catch (e) { console.error('Save error:', e); }
+  }
+
+  function ctCancelEdit() {
+    ctEditMode = false;
+    if (ctSelected) ctRenderViewer(ctSelected.agent, ctSelected.filename, ctRawText);
+  }
+
+  function ctDownload() {
+    if (!ctSelected) return;
+    const blob = new Blob([ctRawText], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = ctSelected.filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function ctDeleteDoc() {
+    if (!ctSelected) return;
+    if (!confirm('Delete this document?')) return;
+    try {
+      await fetch(`/api/content/delete?agent=${ctSelected.agent}&file=${ctSelected.filename}`, { method: 'POST' });
+      ctSelected = null;
+      await loadContentDocs();
+      // Show empty state
+      document.getElementById('ctViewer').innerHTML = '<div class="ct-empty">Select a document to read</div>';
+    } catch (e) { console.error('Delete error:', e); }
+  }
+
+  function ctShowError(msg) {
+    document.getElementById('ctViewer').innerHTML = `<div class="ct-empty" style="color:var(--red);">${escHtml(msg)}</div>`;
+  }
+
+  function ctToggleNewDoc() {
+    const panel = document.getElementById('ctNewPanel');
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) {
+      document.getElementById('ctNewTitle').focus();
+    }
+  }
+
+  async function ctCreateDoc() {
+    const agent = document.getElementById('ctNewAgent').value;
+    const title = document.getElementById('ctNewTitle').value.trim();
+    let content = document.getElementById('ctNewContent').value;
+    if (!title) return;
+
+    // Generate kebab-case slug
+    const slug = title.toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    const today = tzNow().toISOString().slice(0, 10);
+    const filename = `${today}_${slug}.md`;
+
+    // Ensure content starts with # Title
+    if (!content.startsWith('#')) {
+      content = `# ${title}\n\n${content}`;
+    }
+
+    try {
+      await fetch(`/api/content/save?agent=${agent}&file=${filename}`, {
+        method: 'POST',
+        body: content
+      });
+      document.getElementById('ctNewTitle').value = '';
+      document.getElementById('ctNewContent').value = '';
+      ctToggleNewDoc();
+      await loadContentDocs();
+      ctSelectDoc(agent, filename);
+    } catch (e) { console.error('Create error:', e); }
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  DATA CONNECTION — SSE primary, polling fallback
+  // ═════════════════════════════════════════════════════════════════════════
+  function connectSSE() {
+    if (sse) sse.close();
+    sse = new EventSource('/events');
+    sse.onopen = function() {
+      sseConnected = true;
+      document.getElementById('liveDot')?.classList.remove('disconnected');
+    };
+    sse.onmessage = function(e) {
+      try {
+        let data = JSON.parse(e.data);
+        render(data);
+      } catch (err) {}
+    };
+    sse.onerror = function() {
+      sseConnected = false;
+      document.getElementById('liveDot')?.classList.add('disconnected');
+      sse.close();
+      // Start polling if not already
+      if (!pollTimer) startPolling();
+      // Try reconnecting SSE after 5s
+      setTimeout(connectSSE, 5000);
+    };
+  }
+
+  function startPolling() {
+    if (pollTimer) return;
+    pollTimer = setInterval(async () => {
+      try {
+        let resp = await fetch('/api/snapshot');
+        let data = await resp.json();
+        render(data);
+        // If SSE is back, stop polling
+        if (sseConnected) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+      } catch (e) {}
+    }, 8000);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  ANIMATION LOOPS — independent timers
+  // ═════════════════════════════════════════════════════════════════════════
+
+  // Radar sweep — JS requestAnimationFrame, rotates around (70,70)
+  const radarSweepGroup = document.getElementById('radarSweep');
+  let sweepAngle = 0;
+  function animateRadarSweep() {
+    sweepAngle = (sweepAngle + 90 / 60) % 360; // 90deg/sec = 4s per revolution
+    radarSweepGroup.setAttribute('transform', `rotate(${sweepAngle.toFixed(2)} 70 70)`);
+    requestAnimationFrame(animateRadarSweep);
+  }
+  requestAnimationFrame(animateRadarSweep);
+
+  // Directive cycle — every 2.6s
+  setInterval(tickDirective, 2600);
+
+  // Context window cycle — every 2.4s
+  setInterval(tickContextWindow, 2400);
+
+  // Sparkline redraw — every 900ms
+  setInterval(() => {
+    if (D) drawSparkline(D.activity?.activity_by_day);
+  }, 900);
+
+  // Activity feed refresh — every 2.2s
+  setInterval(tickFeed, 2200);
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  INIT — fetch first snapshot immediately, then connect SSE + load board
+  // ═════════════════════════════════════════════════════════════════════════
+  (async () => {
+    try {
+      let resp = await fetch('/api/snapshot');
+      let data = await resp.json();
+      render(data);
+    } catch (e) {}
+    connectSSE();
+    tkLoadBoard().then(() => tkSetupDragDrop());
+  })();
+</script>
+</body>
+</html>

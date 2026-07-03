@@ -1,0 +1,2498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tylostek — Mission Control</title>
+
+<!-- ─── Google Fonts: Inter Tight + JetBrains Mono ─── -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   CSS VARIABLES — Color palette
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --bg:            #15151F;
+
+  --violet:        #8B5CF6;
+  --violet-glow:   #A78BFA;
+  --cyan:          #7DD3FC;
+  --mint:          #5EE2B5;
+  --amber:         #F5B544;
+  --red:           #F26D6D;
+  --pink:          #F472B6;
+  --gold:          #FBBF24;
+  --magenta:       #E879F9;
+
+  --text:          #F4F4F8;
+  --muted:         #8A8A9B;
+
+  --glass-bg:      rgba(31, 31, 43, 0.55);
+  --glass-border:  rgba(255, 255, 255, 0.06);
+  --glass-blur:    24px;
+
+  --radius:        16px;
+  --radius-sm:     10px;
+  --radius-pill:   100px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESET
+   ═══════════════════════════════════════════════════════════════════════════ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter Tight', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BACKGROUND LAYERS — orbs + dot grid (never crisp)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Violet orb — top-left, large, soft */
+.bg-orb-violet {
+  position: fixed;
+  top: -200px;
+  left: -200px;
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.28) 0%, rgba(139, 92, 246, 0) 70%);
+  filter: blur(80px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Cyan orb — mid-right, large, soft */
+.bg-orb-cyan {
+  position: fixed;
+  top: 30%;
+  right: -250px;
+  width: 800px;
+  height: 800px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(125, 211, 252, 0.18) 0%, rgba(125, 211, 252, 0) 70%);
+  filter: blur(90px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Dot grid overlay — very low opacity, ~24px spacing */
+.bg-dotgrid {
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 24px 24px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYOUT WRAPPER
+   ═══════════════════════════════════════════════════════════════════════════ */
+.app {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NAV — fixed top bar
+   ═══════════════════════════════════════════════════════════════════════════ */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  background: rgba(21, 21, 31, 0.65);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-bottom: 1px solid var(--glass-border);
+  z-index: 100;
+}
+
+/* ─── Brand mark ─── */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: conic-gradient(from 180deg, var(--violet), var(--cyan), var(--violet));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.brand-mark::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--bg);
+}
+
+.brand-mark::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 8px var(--mint), 0 0 16px rgba(94, 226, 181, 0.5);
+  animation: pulse-dot 2.5s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.7); }
+}
+
+.brand-text {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.brand-name {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.brand-slash {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.brand-version {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 5px;
+  padding: 2px 7px;
+  margin-left: 4px;
+}
+
+/* ─── Tab pill (center) ─── */
+.tabs {
+  display: flex;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+}
+
+.tab {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 7px 18px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.25s, background 0.25s;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab.active {
+  background: #ffffff;
+  color: var(--bg);
+  font-weight: 600;
+}
+
+/* ─── Status pill (right) ─── */
+.status-cluster {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  padding: 7px 16px;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 6px var(--mint);
+  animation: pulse-dot 2.5s ease-in-out infinite;
+}
+
+.status-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.clock {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  min-width: 68px;
+  text-align: right;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MAIN — tab panels
+   ═══════════════════════════════════════════════════════════════════════════ */
+.main {
+  flex: 1;
+  padding: 88px 28px 32px;
+}
+
+.tab-panel {
+  display: none;
+  animation: fade-in 0.35s ease;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════ Violet dividers between panels (shared glass styling) ═══════════════════════════════════════════════════════════ */
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+}
+
+/* ─── Panel label (shared) ─── */
+.panel-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+}
+
+/* ─── Big number (shared) ─── */
+.big-number {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1;
+  color: var(--text);
+}
+
+.big-number .unit {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   OVERVIEW TAB
+   ═══════════════════════════════════════════════════════════════════════════ */
+#overview {
+  display: none;
+}
+#overview.active {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ─── Eyebrow ─── */
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 4px;
+  margin-bottom: -2px;
+}
+.eyebrow-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 6px var(--mint);
+  animation: pulse-dot 2.5s ease-in-out infinite;
+}
+.eyebrow-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--mint);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.eyebrow-divider {
+  width: 1px;
+  height: 14px;
+  background: rgba(255,255,255,0.1);
+}
+.eyebrow-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.eyebrow-version {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  margin-left: auto;
+}
+
+/* ─── Live Ops Console ─── */
+.ops-console {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.ops-grid {
+  display: grid;
+  grid-template-columns: 180px 1fr 1fr;
+  gap: 32px;
+  align-items: stretch;
+}
+
+/* Radar */
+.radar-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.radar-svg {
+  width: 180px;
+  height: 180px;
+}
+.radar-circle {
+  fill: none;
+  stroke: rgba(255,255,255,0.06);
+  stroke-width: 1;
+}
+.radar-crosshair {
+  stroke: rgba(255,255,255,0.04);
+  stroke-width: 1;
+}
+/* Radar sweep — driven by JS requestAnimationFrame, not CSS or SVG animation. */
+.radar-sweep-line {
+  stroke: var(--cyan);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 3px rgba(125,211,252,0.6));
+}
+.radar-sweep-dot {
+  fill: var(--cyan);
+  filter: drop-shadow(0 0 4px rgba(125,211,252,0.8));
+}
+.radar-agent-dot {
+  filter: drop-shadow(0 0 4px currentColor);
+  transition: cx 0.6s ease, cy 0.6s ease;
+}
+
+/* Center column — directive + context window */
+.ops-center {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.directive-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.directive-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  color: var(--cyan);
+  min-height: 60px;
+  line-height: 1.4;
+  transition: opacity 0.4s ease;
+}
+.directive-text.fading { opacity: 0; }
+
+.ctx-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.ctx-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.ctx-agent {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text);
+}
+.ctx-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+.ctx-segments {
+  display: flex;
+  gap: 3px;
+  margin-top: 8px;
+}
+.ctx-seg {
+  flex: 1;
+  height: 5px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.04);
+  transition: background 0.3s;
+}
+.ctx-seg.filled {
+  animation: seg-pulse 2s ease-in-out infinite;
+}
+@keyframes seg-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+.ctx-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Right column — health */
+.ops-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.health-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.health-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.health-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+.health-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+}
+.health-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-align: right;
+}
+.health-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.05);
+  overflow: hidden;
+}
+.health-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease, background 0.3s;
+}
+.fill-cpu    { background: linear-gradient(90deg, var(--cyan), var(--violet)); }
+.fill-ram    { background: linear-gradient(90deg, var(--violet), var(--magenta)); }
+.fill-disk   { background: linear-gradient(90deg, var(--mint), var(--cyan)); }
+.fill-amber  { background: var(--amber) !important; }
+.fill-red    { background: var(--red) !important; }
+.pct-cyan    { color: var(--cyan); }
+.pct-violet  { color: var(--violet-glow); }
+.pct-mint    { color: var(--mint); }
+.pct-amber   { color: var(--amber); }
+.pct-red     { color: var(--red); }
+
+.db-row {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.db-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+.db-size {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gold);
+}
+
+/* Ops footer */
+.ops-footer {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+}
+.ops-footer-cell {
+  padding: 0 16px;
+  border-left: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ops-footer-cell:first-child { border-left: none; padding-left: 0; }
+.ops-footer-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+.ops-footer-val {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+.ops-footer-val.mint { color: var(--mint); }
+.ops-footer-val.red  { color: var(--red); }
+
+/* ─── Stats Strip ─── */
+.stats-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+.stat-card {
+  padding: 18px 20px;
+  border-top: 2px solid;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.stat-card.mint    { border-top-color: var(--mint); }
+.stat-card.cyan    { border-top-color: var(--cyan); }
+.stat-card.violet  { border-top-color: var(--violet-glow); }
+.stat-card.gold    { border-top-color: var(--gold); }
+.stat-card.pink    { border-top-color: var(--pink); }
+.stat-card-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.stat-card-num {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(24px, 2.4vw, 34px);
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--text);
+}
+.stat-card-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.stat-card-sub .dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--mint);
+  animation: pulse-dot 2.5s ease-in-out infinite;
+}
+.decimal-jitter {
+  display: inline-block;
+  animation: decimal-flicker 1.8s ease-in-out infinite;
+}
+@keyframes decimal-flicker {
+  0%, 100% { opacity: 1; }
+  15%      { opacity: 0.3; }
+  30%      { opacity: 1; }
+}
+
+/* ─── Bottom Section ─── */
+.bottom-section {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 14px;
+}
+.throughput-card, .activity-card {
+  padding: 20px;
+}
+.throughput-num {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(34px, 4vw, 56px);
+  font-weight: 700;
+  color: var(--cyan);
+  line-height: 1;
+}
+.throughput-label {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 18px;
+  color: var(--muted);
+  margin-left: 8px;
+}
+.sparkline-canvas {
+  width: 100%;
+  height: 100px;
+  margin-top: 12px;
+  display: block;
+}
+.sparkline-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--mint);
+  margin-top: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.activity-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 280px;
+  overflow: hidden;
+}
+.activity-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  animation: slide-in 0.4s ease;
+}
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.activity-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.activity-desc {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.activity-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.activity-status.done { color: var(--mint); }
+.activity-status.fail { color: var(--red); }
+.activity-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ─── Skeleton (shared, kept for other tabs) ─── */
+.skeleton-line {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  margin-bottom: 8px;
+}
+.skeleton-line.short { width: 60%; }
+.skeleton-line.medium { width: 80%; }
+.skeleton-line.full { width: 100%; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AGENTS TAB
+   ═══════════════════════════════════════════════════════════════════════════ */
+#agents {
+  display: none;
+}
+#agents.active {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ─── Header ─── */
+.ag-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+.ag-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ag-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.ag-heading {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: clamp(25px, 3.5vw, 42px);
+  font-weight: 500;
+  letter-spacing: -1.5px;
+  line-height: 1;
+  color: var(--text);
+}
+
+/* ─── Status summary card ─── */
+.ag-status-card {
+  display: flex;
+  padding: 0;
+  overflow: hidden;
+}
+.ag-status-cell {
+  padding: 14px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-left: 1px solid rgba(255,255,255,0.06);
+}
+.ag-status-cell:first-child { border-left: none; }
+.ag-status-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+.ag-status-num {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1;
+}
+.ag-status-num.mint   { color: var(--mint); }
+.ag-status-num.amber  { color: var(--amber); }
+.ag-status-num.muted  { color: var(--muted); }
+
+/* ─── Agent cards row ─── */
+.ag-cards {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+.ag-card {
+  padding: 18px;
+  border-top: 2px solid;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ag-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ag-code-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.ag-platform-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ag-platform-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.ag-platform-pill.discord { background: rgba(167,139,250,0.12); color: var(--violet-glow); }
+.ag-platform-pill.telegram { background: rgba(125,211,252,0.12); color: var(--cyan); }
+.ag-status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+}
+.ag-status-dot.active { animation: pulse-dot 2.5s ease-in-out infinite; }
+.ag-status-dot.idle { background: var(--amber); }
+.ag-status-dot.dormant { background: rgba(255,255,255,0.1); }
+
+.ag-name {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+.ag-role {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ag-chart-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-top: 4px;
+}
+.ag-mini-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 32px;
+}
+.ag-mini-bar {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  min-height: 2px;
+  transition: height 0.4s ease;
+}
+.ag-stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  text-align: center;
+}
+.ag-stat-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ag-stat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.ag-stat-val {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+}
+.ag-stat-val.mint { color: var(--mint); }
+.ag-stat-val.amber { color: var(--amber); }
+.ag-stat-val.red { color: var(--red); }
+.ag-stat-val.muted { color: var(--muted); font-size: 12px; font-weight: 500; }
+
+.ag-load-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.05);
+  overflow: hidden;
+}
+.ag-load-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+.ag-last-task {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ag-last-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* ─── Agent Statistics ─── */
+.ag-stats-section {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 14px;
+}
+.ag-stats-eyebrow {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.ag-stats-eyebrow svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0.6;
+}
+.ag-stat-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.ag-stat-tile {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+.ag-stat-tile-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.ag-stat-tile-val {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+.ag-stat-tile-bar {
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(255,255,255,0.05);
+  overflow: hidden;
+  margin-top: auto;
+}
+.ag-stat-tile-fill {
+  height: 100%;
+  border-radius: 1px;
+  width: 0%;
+  transition: width 0.6s ease;
+}
+.fill-amber  { background: var(--amber); }
+.fill-cyan   { background: var(--cyan); }
+.fill-mint   { background: var(--mint); }
+.fill-red    { background: var(--red); }
+
+/* Donut card */
+.ag-donut-card {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.ag-donut-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  align-self: flex-start;
+}
+.ag-donut-canvas {
+  width: 130px;
+  height: 130px;
+}
+.ag-donut-legend {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.ag-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.ag-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ag-legend-name {
+  flex: 1;
+  color: var(--text);
+  text-transform: capitalize;
+}
+.ag-legend-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ─── Agent log ─── */
+.ag-log-card {
+  padding: 20px;
+}
+.ag-log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.ag-log-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.ag-log-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text);
+}
+.ag-filters {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.ag-filter-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+.ag-filter-btn:hover { color: var(--text); }
+.ag-filter-btn.active {
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+}
+.ag-log-table-wrap {
+  max-height: 420px;
+  overflow-y: auto;
+}
+.ag-log-table-wrap::-webkit-scrollbar { width: 6px; }
+.ag-log-table-wrap::-webkit-scrollbar-track { background: transparent; }
+.ag-log-table-wrap::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
+.ag-log-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.ag-log-table th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--glass-border);
+  position: sticky;
+  top: 0;
+  background: var(--panel-bg, rgba(21,21,31,0.9));
+  z-index: 1;
+}
+.ag-log-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.ag-log-table tr:hover td { background: rgba(255,255,255,0.02); }
+.ag-log-status {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.ag-log-status.done { background: rgba(94,226,181,0.12); color: var(--mint); }
+.ag-log-status.fail { background: rgba(242,109,109,0.12); color: var(--red); }
+
+/* ─── Responsive ─── */
+@media (max-width: 1100px) {
+  .ag-cards { grid-template-columns: repeat(3, 1fr); }
+  .ag-card:nth-child(n+4) { grid-column: span 1; }
+}
+@media (max-width: 768px) {
+  .ag-cards { grid-template-columns: 1fr; }
+  .ag-status-card { flex-direction: column; }
+  .ag-status-cell { border-left: none; border-top: 1px solid rgba(255,255,255,0.06); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TASKS TAB
+   ═══════════════════════════════════════════════════ funnel + board ═══════════════════════════════════════════════════════════════════════════ */
+#tasks {
+  display: none;
+}
+#tasks.active {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+
+.tk-funnel {
+  grid-column: span 4;
+  padding: 20px;
+}
+
+.tk-board {
+  grid-column: span 8;
+  padding: 20px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCHEDULE TAB
+   ═══════════════════════════════════════════════════════════════════════════ */
+#schedule {
+  display: none;
+}
+#schedule.active {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+
+.sc-timeline {
+  grid-column: span 8;
+  padding: 20px;
+}
+
+.sc-side {
+  grid-column: span 4;
+  padding: 20px;
+}
+
+/* ═════════════════════════════════════════
+   CONTENT TAB — placeholder for Prompt 24
+   ═══════════════════════════════════════════════════════════════════════════ */
+#content {
+  display: none;
+}
+#content.active {
+  display: block;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 1100px) {
+  .ov-stat       { grid-column: span 6; }
+  .ov-health     { grid-column: span 12; }
+  .ov-agents     { grid-column: span 12; }
+  .ov-sessions   { grid-column: span 12; }
+  .ov-side       { grid-column: span 12; }
+
+  .ag-card       { grid-column: span 6; }
+  .ag-activity   { grid-column: span 12; }
+  .ag-side       { grid-column: span 12; }
+
+  .tk-funnel     { grid-column: span 12; }
+  .tk-board      { grid-column: span 12; }
+
+  .sc-timeline   { grid-column: span 12; }
+  .sc-side       { grid-column: span 12; }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 0 14px;
+  }
+
+  .tabs {
+    display: none;
+  }
+
+  .status-text {
+    display: none;
+  }
+
+  .main {
+    padding: 80px 14px 24px;
+  }
+
+  .ov-stat       { grid-column: span 12; }
+  .ag-card       { grid-column: span 12; }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── Background layers ─── -->
+<div class="bg-orb-violet"></div>
+<div class="bg-orb-cyan"></div>
+<div class="bg-dotgrid"></div>
+
+<!-- ─── App ─── -->
+<div class="app">
+
+  <!-- ═══════ NAV ═══════ -->
+  <nav class="nav">
+    <!-- Brand -->
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-text">
+        <span class="brand-name">Tylostek</span>
+        <span class="brand-slash">/ DASHBOARD</span>
+        <span class="brand-version">v1.3</span>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="agents">Agents</button>
+      <button class="tab" data-tab="tasks">Tasks</button>
+      <button class="tab" data-tab="schedule">Schedule</button>
+      <button class="tab" data-tab="content">Content</button>
+    </div>
+
+    <!-- Status -->
+    <div class="status-cluster">
+      <div class="status-pill">
+        <span class="status-dot"></span>
+        <span class="status-text">All systems operational</span>
+      </div>
+      <span class="clock" id="clock">00:00:00</span>
+    </div>
+  </nav>
+
+  <!-- ═══════ MAIN ═══════ -->
+  <div class="main">
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         OVERVIEW TAB
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-panel active" id="overview">
+
+      <!-- Eyebrow -->
+      <div class="eyebrow">
+        <span class="eyebrow-dot"></span>
+        <span class="eyebrow-text">UPLINK SYNCED</span>
+        <span class="eyebrow-divider"></span>
+        <span class="eyebrow-label">Hermes Orchestrator</span>
+        <span class="eyebrow-divider"></span>
+        <span class="eyebrow-version" id="eyebrowVersion">v1.3</span>
+      </div>
+
+      <!-- Live Ops Console -->
+      <div class="glass ops-console">
+        <div class="ops-grid">
+
+          <!-- Left: Radar -->
+          <div class="radar-wrap">
+            <svg class="radar-svg" viewBox="0 0 140 140" id="radarSvg">
+              <!-- Concentric circles -->
+              <circle class="radar-circle" cx="70" cy="70" r="62"/>
+              <circle class="radar-circle" cx="70" cy="70" r="46"/>
+              <circle class="radar-circle" cx="70" cy="70" r="30"/>
+              <circle class="radar-circle" cx="70" cy="70" r="14"/>
+              <!-- Crosshairs -->
+              <line class="radar-crosshair" x1="70" y1="8" x2="70" y2="132"/>
+              <line class="radar-crosshair" x1="8" y1="70" x2="132" y2="70"/>
+              <!-- Agent dots (rendered by JS) -->
+              <g id="radarDots"></g>
+              <!-- Sweep (rotated by JS) -->
+              <g id="radarSweep">
+                <line class="radar-sweep-line" x1="70" y1="70" x2="70" y2="8"/>
+                <circle class="radar-sweep-dot" cx="70" cy="8" r="2.5"/>
+              </g>
+            </svg>
+          </div>
+
+          <!-- Center: Directive + Context Window -->
+          <div class="ops-center">
+            <div class="directive-label">Current Directive</div>
+            <div class="directive-text" id="directiveText">Awaiting data…</div>
+            <div class="ctx-label" style="margin-top:8px;">Context Window</div>
+            <div class="ctx-header">
+              <span class="ctx-agent" id="ctxAgent">—</span>
+              <span class="ctx-count" id="ctxCount">0 tasks</span>
+            </div>
+            <div class="ctx-segments" id="ctxSegments"></div>
+            <div class="ctx-status" id="ctxStatus">—</div>
+          </div>
+
+          <!-- Right: Hostinger Health -->
+          <div class="ops-right">
+            <div class="panel-label">Hostinger Health</div>
+
+            <div class="health-metric">
+              <div class="health-top">
+                <span class="health-name">CPU</span>
+                <span class="health-pct pct-cyan" id="cpuPct">—</span>
+              </div>
+              <div class="health-track"><div class="health-fill fill-cpu" id="cpuFill" style="width:0%"></div></div>
+            </div>
+
+            <div class="health-metric">
+              <div class="health-top">
+                <span class="health-name">RAM</span>
+                <span class="health-pct pct-violet" id="ramPct">—</span>
+              </div>
+              <div class="health-track"><div class="health-fill fill-ram" id="ramFill" style="width:0%"></div></div>
+              <div class="health-sub" id="ramSub">— / — MB</div>
+            </div>
+
+            <div class="health-metric">
+              <div class="health-top">
+                <span class="health-name">Disk</span>
+                <span class="health-pct pct-mint" id="diskPct">—</span>
+              </div>
+              <div class="health-track"><div class="health-fill fill-disk" id="diskFill" style="width:0%"></div></div>
+              <div class="health-sub" id="diskSub">— / — GB</div>
+            </div>
+
+            <div class="db-row">
+              <span class="db-label">Hermes DBs</span>
+              <span class="db-size" id="dbSize">— MB</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="ops-footer">
+          <div class="ops-footer-cell">
+            <span class="ops-footer-label">Queue</span>
+            <span class="ops-footer-val" id="footQueue">—</span>
+          </div>
+          <div class="ops-footer-cell">
+            <span class="ops-footer-label">Sessions</span>
+            <span class="ops-footer-val" id="footSessions">—</span>
+          </div>
+          <div class="ops-footer-cell">
+            <span class="ops-footer-label">Errors</span>
+            <span class="ops-footer-val" id="footErrors">—</span>
+          </div>
+          <div class="ops-footer-cell">
+            <span class="ops-footer-label">Today</span>
+            <span class="ops-footer-val" id="footToday">—</span>
+          </div>
+          <div class="ops-footer-cell">
+            <span class="ops-footer-label">Uptime</span>
+            <span class="ops-footer-val" id="footUptime">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Strip -->
+      <div class="stats-strip">
+        <div class="glass stat-card mint">
+          <div class="stat-card-label">Integrity</div>
+          <div class="stat-card-num" id="statIntegrity">—<span class="decimal-jitter" id="statIntegrityDec">.00</span><span style="font-size:16px;color:var(--muted)">%</span></div>
+          <div class="stat-card-sub"><span class="dot"></span><span id="statIntegritySub">— of 5 responsive</span></div>
+        </div>
+        <div class="glass stat-card cyan">
+          <div class="stat-card-label">Agent Calls</div>
+          <div class="stat-card-num" id="statCalls">—</div>
+          <div class="stat-card-sub" id="statCallsSub">—</div>
+        </div>
+        <div class="glass stat-card violet">
+          <div class="stat-card-label">Messages</div>
+          <div class="stat-card-num" id="statMessages">—</div>
+          <div class="stat-card-sub" id="statMessagesSub">—</div>
+        </div>
+        <div class="glass stat-card gold">
+          <div class="stat-card-label">Tokens In</div>
+          <div class="stat-card-num" id="statTokensIn">—</div>
+          <div class="stat-card-sub" id="statTokensInSub">—</div>
+        </div>
+        <div class="glass stat-card pink">
+          <div class="stat-card-label">Cache Hits</div>
+          <div class="stat-card-num" id="statCacheHits">—</div>
+          <div class="stat-card-sub" id="statCacheHitsSub">—</div>
+        </div>
+      </div>
+
+      <!-- Bottom Section -->
+      <div class="bottom-section">
+        <div class="glass throughput-card">
+          <div class="panel-label">Throughput</div>
+          <div style="display:flex;align-items:baseline;gap:4px;">
+            <span class="throughput-num" id="throughputNum">0</span>
+            <span class="throughput-label">responses total</span>
+          </div>
+          <canvas class="sparkline-canvas" id="sparkline" width="600" height="100"></canvas>
+          <div class="sparkline-sub" id="sparklineSub">—</div>
+        </div>
+
+        <div class="glass activity-card">
+          <div class="panel-label">Activity</div>
+          <div class="activity-feed" id="activityFeed"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         AGENTS TAB
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="agents">
+
+      <!-- Header -->
+      <div class="ag-header">
+        <div class="ag-header-left">
+          <div class="ag-eyebrow">SUBAGENTS</div>
+          <div class="ag-heading">Team Stats.</div>
+        </div>
+        <div class="glass ag-status-card">
+          <div class="ag-status-cell">
+            <span class="ag-status-label">Active</span>
+            <span class="ag-status-num mint" id="agActiveCount">—</span>
+          </div>
+          <div class="ag-status-cell">
+            <span class="ag-status-label">Idle</span>
+            <span class="ag-status-num amber" id="agIdleCount">—</span>
+          </div>
+          <div class="ag-status-cell">
+            <span class="ag-status-label">Dormant</span>
+            <span class="ag-status-num muted" id="agDormantCount">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent cards -->
+      <div class="ag-cards" id="agCards"></div>
+
+      <!-- Agent Statistics -->
+      <div class="ag-stats-section">
+        <div class="ag-stats-eyebrow">
+          <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="8" width="3" height="6" rx="0.5"/><rect x="6" y="5" width="3" height="9" rx="0.5"/><rect x="11" y="2" width="3" height="12" rx="0.5"/></svg>
+          Agent Statistics
+        </div>
+
+        <!-- Stat cards 2×2 -->
+        <div class="ag-stat-cards">
+          <div class="glass ag-stat-tile">
+            <span class="ag-stat-tile-label">Tasks Today</span>
+            <span class="ag-stat-tile-val" id="agStatToday">—</span>
+            <div class="ag-stat-tile-bar"><div class="ag-stat-tile-fill fill-amber" id="agStatTodayBar"></div></div>
+          </div>
+          <div class="glass ag-stat-tile">
+            <span class="ag-stat-tile-label">Tasks This Week</span>
+            <span class="ag-stat-tile-val" id="agStatWeek">—</span>
+            <div class="ag-stat-tile-bar"><div class="ag-stat-tile-fill fill-cyan" id="agStatWeekBar"></div></div>
+          </div>
+          <div class="glass ag-stat-tile">
+            <span class="ag-stat-tile-label">Most Active</span>
+            <span class="ag-stat-tile-val" id="agStatMostActive">—</span>
+            <div class="ag-stat-tile-bar"><div class="ag-stat-tile-fill" id="agStatMostActiveBar"></div></div>
+          </div>
+          <div class="glass ag-stat-tile">
+            <span class="ag-stat-tile-label">Success Rate</span>
+            <span class="ag-stat-tile-val" id="agStatSuccess">—</span>
+            <div class="ag-stat-tile-bar"><div class="ag-stat-tile-fill" id="agStatSuccessBar"></div></div>
+          </div>
+        </div>
+
+        <!-- Donut chart -->
+        <div class="glass ag-donut-card">
+          <span class="ag-donut-eyebrow">Task Distribution</span>
+          <canvas class="ag-donut-canvas" id="agDonut" width="130" height="130"></canvas>
+          <div class="ag-donut-legend" id="agDonutLegend"></div>
+        </div>
+      </div>
+
+      <!-- Agent log -->
+      <div class="glass ag-log-card">
+        <div class="ag-log-header">
+          <span class="ag-log-title">Agent Logs</span>
+          <span class="ag-log-count" id="agLogCount">0 entries</span>
+        </div>
+        <div class="ag-filters" id="agFilters"></div>
+        <div class="ag-log-table-wrap">
+          <table class="ag-log-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Agent</th>
+                <th>Task</th>
+                <th>Model</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="agLogBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         TASKS TAB
+         ═══════════════ Existing funnel + board skeleton ═════════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tasks">
+
+      <div class="glass tk-funnel">
+        <div class="panel-label">Task Funnel</div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line short"></div>
+      </div>
+
+      <div class="glass tk-board">
+        <div class="panel-label">Personal Board</div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line medium"></div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         SCHEDULE TAB
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="schedule">
+
+      <div class="glass sc-timeline">
+        <div class="panel-label">Schedule Timeline</div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line medium"></div>
+      </div>
+
+      <div class="glass sc-side">
+        <div class="panel-label">Cron Jobs</div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line full"></div>
+        <div class="skeleton-line short"></div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         CONTENT TAB — placeholder div, filled in Prompt 24
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="content">
+      <div class="glass" style="padding: 20px; min-height: 400px;">
+        <div class="panel-label">Content</div>
+        <!-- Prompt 24 will fill this -->
+      </div>
+    </div>
+
+  </div><!-- /.main -->
+</div><!-- /.app -->
+
+<script>
+  // ═════════════════════════════════════════════════════════════════════════
+  //  GLOBAL STATE
+  // ═════════════════════════════════════════════════════════════════════════
+  let D = null;                    // latest snapshot data
+  let sse = null;                  // SSE connection
+  let pollTimer = null;            // polling fallback timer
+  let sseConnected = false;
+
+  // Agent accent colors
+  const AGENT_COLORS = {
+    orchestrator: '#A78BFA',
+    analyst:      '#7DD3FC',
+    writer:       '#F472B6',
+    marketer:     '#E879F9',
+    coder:        '#A78BFA',
+  };
+
+  function agentColor(name) {
+    return AGENT_COLORS[name?.toLowerCase()] || '#A78BFA';
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  CLOCK
+  // ═════════════════════════════════════════════════════════════════════════
+  function updateClock() {
+    const now = new Date();
+    const h = String(now.getUTCHours()).padStart(2, '0');
+    const m = String(now.getUTCMinutes()).padStart(2, '0');
+    const s = String(now.getUTCSeconds()).padStart(2, '0');
+    document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  TAB SWITCHING
+  // ═════════════════════════════════════════════════════════════════════════
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById(target).classList.add('active');
+    });
+  });
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  HELPERS
+  // ═════════════════════════════════════════════════════════════════════════
+  function fmtNum(n) {
+    if (n == null || isNaN(n)) return '—';
+    return Number(n).toLocaleString();
+  }
+
+  function fmtCompact(n) {
+    if (n == null || isNaN(n)) return '—';
+    if (n < 1000) return String(n);
+    if (n < 1e6) return (n / 1e3).toFixed(1) + 'K';
+    if (n < 1e9) return (n / 1e6).toFixed(2) + 'M';
+    return (n / 1e9).toFixed(2) + 'B';
+  }
+
+  function fmtRelative(isoStr) {
+    if (!isoStr) return '—';
+    try {
+      let d = new Date(isoStr);
+      let now = new Date();
+      let diff = (now - d) / 1000;
+      if (diff < 60) return Math.floor(diff) + 's';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h';
+      return Math.floor(diff / 86400) + 'd';
+    } catch { return '—'; }
+  }
+
+  function fmtUptime(secs) {
+    if (!secs || secs <= 0) return '—';
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    return h > 0 ? `${h}h${m}m` : `${m}m`;
+  }
+
+  function truncate(str, n) {
+    if (!str) return '—';
+    return str.length > n ? str.substring(0, n) + '…' : str;
+  }
+
+  function pctColor(pct) {
+    if (pct >= 85) return 'red';
+    if (pct >= 70) return 'amber';
+    return null;
+  }
+
+  function setBar(fillId, pctId, pct, baseColorClass, basePctClass, subId, subText) {
+    const fill = document.getElementById(fillId);
+    const pctEl = document.getElementById(pctId);
+    fill.style.width = Math.min(100, pct) + '%';
+    const danger = pctColor(pct);
+    fill.className = 'health-fill ' + (danger ? 'fill-' + danger : baseColorClass);
+    pctEl.className = 'health-pct ' + (danger ? 'pct-' + danger : basePctClass);
+    pctEl.textContent = pct.toFixed(1) + '%';
+    if (subId && subText != null) document.getElementById(subId).textContent = subText;
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  RADAR — agent dots positioned by response share
+  // ═════════════════════════════════════════════════════════════════════════
+  function renderRadar(agents) {
+    const g = document.getElementById('radarDots');
+    if (!agents || !agents.length) { g.innerHTML = ''; return; }
+
+    const total = agents.reduce((s, a) => s + (a.total || 0), 0) || 1;
+    const cx = 70, cy = 70;
+    const maxR = 58;
+    const minR = 12;
+
+    // Distribute agents around the circle at different angles
+    const angleStep = (2 * Math.PI) / agents.length;
+
+    let html = '';
+    agents.forEach((a, i) => {
+      const share = (a.total || 0) / total;
+      const r = minR + share * (maxR - minR);
+      const angle = i * angleStep - Math.PI / 2; // start at top
+      const x = cx + r * Math.cos(angle);
+      const y = cy + r * Math.sin(angle);
+      const color = agentColor(a.agent_name);
+      html += `<circle class="radar-agent-dot" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="4.5" fill="${color}" style="color:${color}"/>`;
+    });
+    g.innerHTML = html;
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  DIRECTIVE — cycles through recent log entries every 2.6s
+  // ═════════════════════════════════════════════════════════════════════════
+  let directiveIdx = 0;
+  let directiveEntries = [];
+
+  function updateDirectiveEntries(recent) {
+    directiveEntries = (recent || []).map(e => ({
+      text: `${(e.agent_name || '—').toUpperCase()} · ${e.task_description || '—'}`,
+      status: e.status,
+    }));
+    if (directiveIdx >= directiveEntries.length) directiveIdx = 0;
+  }
+
+  function tickDirective() {
+    const el = document.getElementById('directiveText');
+    if (!directiveEntries.length) {
+      el.textContent = 'No recent activity';
+      return;
+    }
+    el.classList.add('fading');
+    setTimeout(() => {
+      const entry = directiveEntries[directiveIdx % directiveEntries.length];
+      el.textContent = entry.text;
+      el.classList.remove('fading');
+      directiveIdx++;
+    }, 400);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  CONTEXT WINDOW — cycles agents every 2.4s
+  // ═════════════════════════════════════════════════════════════════════════
+  let ctxIdx = 0;
+  let ctxAgents = [];
+
+  function updateCtxAgents(agents) {
+    ctxAgents = agents || [];
+    if (ctxIdx >= ctxAgents.length) ctxIdx = 0;
+  }
+
+  function tickContextWindow() {
+    if (!ctxAgents.length) return;
+    const a = ctxAgents[ctxIdx % ctxAgents.length];
+    const total = ctxAgents.reduce((s, x) => s + (x.total || 0), 0) || 1;
+    const share = (a.total || 0) / total;
+    const filledCount = Math.round(share * 16);
+    const color = agentColor(a.agent_name);
+
+    document.getElementById('ctxAgent').textContent = (a.agent_name || '—').toUpperCase();
+    document.getElementById('ctxAgent').style.color = color;
+    document.getElementById('ctxCount').textContent = `${a.total || 0} tasks`;
+
+    // Segments
+    const segContainer = document.getElementById('ctxSegments');
+    let segHtml = '';
+    for (let i = 0; i < 16; i++) {
+      if (i < filledCount) {
+        const delay = (i * 0.1).toFixed(2);
+        segHtml += `<div class="ctx-seg filled" style="background:${color};animation-delay:${delay}s"></div>`;
+      } else {
+        segHtml += `<div class="ctx-seg"></div>`;
+      }
+    }
+    segContainer.innerHTML = segHtml;
+
+    document.getElementById('ctxStatus').textContent = a.last_task ? truncate(a.last_task, 60) : 'idle';
+    ctxIdx++;
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  VPS HEALTH BARS
+  // ═════════════════════════════════════════════════════════════════════════
+  function renderVPS(vps) {
+    if (!vps || vps.error) return;
+
+    setBar('cpuFill', 'cpuPct', vps.cpu_pct || 0, 'fill-cpu', 'pct-cyan');
+
+    setBar('ramFill', 'ramPct', vps.mem_pct || 0, 'fill-ram', 'pct-violet',
+           'ramSub', `${fmtNum(vps.mem_used_mb)} / ${fmtNum(vps.mem_total_mb)} MB`);
+
+    setBar('diskFill', 'diskPct', vps.disk_pct || 0, 'fill-disk', 'pct-mint',
+           'diskSub', `${vps.disk_used_gb} / ${vps.disk_total_gb} GB`);
+
+    document.getElementById('dbSize').textContent = `${vps.db_size_mb || 0} MB`;
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  OPS FOOTER
+  // ═════════════════════════════════════════════════════════════════════════
+  function renderFooter(d) {
+    const kanban = d.kanban || {};
+    const sessions = d.sessions || {};
+    const stats = d.stats || {};
+    const activity = d.activity || {};
+    const gateway = d.gateway || {};
+    const byDay = activity.activity_by_day || [];
+
+    document.getElementById('footQueue').textContent = fmtNum(kanban.total || 0);
+    document.getElementById('footSessions').textContent = fmtNum(sessions.count || 0);
+
+    const errors = stats.failed || 0;
+    const errEl = document.getElementById('footErrors');
+    errEl.textContent = fmtNum(errors);
+    errEl.className = 'ops-footer-val ' + (errors > 0 ? 'red' : 'mint');
+
+    const today = byDay.length ? byDay[byDay.length - 1].total : 0;
+    document.getElementById('footToday').textContent = fmtNum(today);
+
+    document.getElementById('footUptime').textContent = fmtUptime(gateway.uptime_seconds || 0);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  STATS STRIP
+  // ═════════════════════════════════════════════════════════════════════════
+  function renderStats(d) {
+    const stats = d.stats || {};
+    const sessions = d.sessions || {};
+    const sessTotals = sessions.totals || {};
+    const agents = d.agents || [];
+
+    // Integrity = completed / total * 100
+    const total = stats.total || 0;
+    const completed = stats.completed || 0;
+    const integrity = total > 0 ? (completed / total * 100) : 100;
+    const intWhole = Math.floor(integrity);
+    const intDec = (integrity % 1).toFixed(2).substring(1); // ".XX"
+    document.getElementById('statIntegrity').firstChild.textContent = intWhole;
+    document.getElementById('statIntegrityDec').textContent = intDec;
+
+    const responsiveCount = agents.filter(a => (a.total || 0) > 0).length;
+    document.getElementById('statIntegritySub').textContent = `${responsiveCount} of 5 responsive`;
+
+    // Agent Calls
+    document.getElementById('statCalls').textContent = fmtCompact(total);
+    document.getElementById('statCallsSub').textContent = `${completed} completed`;
+
+    // Messages
+    const msgs = sessTotals.messages || 0;
+    document.getElementById('statMessages').textContent = fmtCompact(msgs);
+    document.getElementById('statMessagesSub').textContent = `${sessions.count || 0} sessions`;
+
+    // Tokens In
+    const tokIn = sessTotals.input_tokens || 0;
+    document.getElementById('statTokensIn').textContent = fmtCompact(tokIn);
+    document.getElementById('statTokensInSub').textContent = 'total input';
+
+    // Cache Hits
+    const cacheHits = sessTotals.cache_read_tokens || 0;
+    document.getElementById('statCacheHits').textContent = fmtCompact(cacheHits);
+    document.getElementById('statCacheHitsSub').textContent = 'cache reads';
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  SPARKLINE — 7-day activity, redraws every 900ms
+  // ═════════════════════════════════════════════════════════════════════════
+  function drawSparkline(data) {
+    const canvas = document.getElementById('sparkline');
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    if (!data || !data.length) return;
+
+    const values = data.map(d => d.total || 0);
+    const maxVal = Math.max(...values, 1);
+    const stepX = w / (values.length - 1 || 1);
+
+    // Filled area
+    const grad = ctx.createLinearGradient(0, 0, w, 0);
+    grad.addColorStop(0, 'rgba(139, 92, 246, 0.3)');
+    grad.addColorStop(1, 'rgba(125, 211, 252, 0.3)');
+
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    values.forEach((v, i) => {
+      const x = i * stepX;
+      const y = h - (v / maxVal) * (h - 10) - 5;
+      ctx.lineTo(x, y);
+    });
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Stroke line
+    const strokeGrad = ctx.createLinearGradient(0, 0, w, 0);
+    strokeGrad.addColorStop(0, '#8B5CF6');
+    strokeGrad.addColorStop(1, '#7DD3FC');
+
+    ctx.beginPath();
+    values.forEach((v, i) => {
+      const x = i * stepX;
+      const y = h - (v / maxVal) * (h - 10) - 5;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = strokeGrad;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Glowing dot at rightmost point
+    const lastX = (values.length - 1) * stepX;
+    const lastY = h - (values[values.length - 1] / maxVal) * (h - 10) - 5;
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, 4, 0, 2 * Math.PI);
+    ctx.fillStyle = '#5EE2B5';
+    ctx.shadowColor = '#5EE2B5';
+    ctx.shadowBlur = 10;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Most active day
+    const maxEntry = data.reduce((a, b) => (a.total > b.total ? a : b), data[0]);
+    document.getElementById('sparklineSub').textContent =
+      maxEntry && maxEntry.total > 0 ? `Peak: ${maxEntry.date} (${maxEntry.total})` : 'No activity yet';
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  ACTIVITY FEED — 8 most recent, slides in every 2.2s
+  // ═════════════════════════════════════════════════════════════════════════
+  let feedEntries = [];
+
+  function updateFeedEntries(activity) {
+    feedEntries = (activity || []).slice(0, 8);
+  }
+
+  function renderFeed() {
+    const container = document.getElementById('activityFeed');
+    if (!feedEntries.length) {
+      container.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:20px 0;text-align:center;">No activity yet</div>';
+      return;
+    }
+
+    let html = '';
+    feedEntries.forEach(e => {
+      const color = agentColor(e.agent_name);
+      const status = (e.status || '').toLowerCase();
+      const statusClass = status === 'failed' ? 'fail' : 'done';
+      const statusIcon = status === 'failed' ? '✗' : '✓';
+      html += `<div class="activity-row">
+        <span class="activity-badge" style="background:${color}22;color:${color};">${(e.agent_name || '—').toUpperCase()}</span>
+        <span class="activity-desc">${truncate(e.task_description || '—', 50)}</span>
+        <span class="activity-status ${statusClass}">${statusIcon}</span>
+        <span class="activity-time">${fmtRelative(e.created_at)}</span>
+      </div>`;
+    });
+    container.innerHTML = html;
+  }
+
+  function tickFeed() {
+    if (!feedEntries.length) return;
+    // Rotate: move first to end (simulates a new entry sliding in)
+    // Actually, just re-render to show latest data
+    renderFeed();
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  FULL RENDER — called on every data update
+  // ═════════════════════════════════════════════════════════════════════════
+  function render(d) {
+    D = d;
+    const agents = d.agents || [];
+    const activity = d.activity || {};
+
+    renderRadar(agents);
+    updateDirectiveEntries(activity.activity || activity.recent);
+    updateCtxAgents(agents);
+    renderVPS(d.vps);
+    renderFooter(d);
+    renderStats(d);
+    drawSparkline(activity.activity_by_day);
+    updateFeedEntries(activity.activity || activity.recent);
+    renderFeed();
+
+    // Throughput number
+    document.getElementById('throughputNum').textContent = fmtNum((d.stats || {}).total || 0);
+
+    // Agents tab
+    renderAgentsTab(d);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  AGENTS TAB
+  // ═════════════════════════════════════════════════════════════════════════
+
+  const AGENT_META = [
+    { name: 'orchestrator', code: 'ORCH', display: 'Orchestrator', platform: 'telegram',
+      role: 'Top-level system coordinator. Oversees the full multi-agent system, maintains architecture, and resolves conflicts.' },
+    { name: 'analyst',      code: 'ANL',  display: 'Analyst',      platform: 'discord',
+      role: 'Research, trend intelligence, and sourcing. Specializes in deep web research and data analysis.' },
+    { name: 'writer',       code: 'WTR',  display: 'Writer',       platform: 'discord',
+      role: 'Writing, editing, and content shaping. Creates articles, blog posts, and SEO-optimized content.' },
+    { name: 'marketer',     code: 'MKT',  display: 'Marketer',     platform: 'discord',
+      role: 'Marketing strategy, growth, campaigns, and monetization. Drives social media and audience growth.' },
+    { name: 'coder',        code: 'CDR',  display: 'Coder',        platform: 'discord',
+      role: 'Development, automation, integrations, and technical systems. Full-stack web development and API work.' },
+  ];
+
+  let agFilter = 'ALL';
+  let agLogEntries = [];
+
+  function getAgentStatus(lastSeen) {
+    if (!lastSeen) return 'dormant';
+    try {
+      const diff = (Date.now() - new Date(lastSeen).getTime()) / 1000;
+      if (diff < 600) return 'active';   // 10 min
+      if (diff < 21600) return 'idle';  // 6 hours
+      return 'dormant';
+    } catch { return 'dormant'; }
+  }
+
+  function renderAgentsTab(d) {
+    const agents = d.agents || [];
+    if (!agents.length) return;
+
+    const totalResponses = agents.reduce((s, a) => s + (a.total || 0), 0) || 1;
+
+    // Status counts
+    let active = 0, idle = 0, dormant = 0;
+    agents.forEach(a => {
+      const st = getAgentStatus(a.last_seen);
+      if (st === 'active') active++;
+      else if (st === 'idle') idle++;
+      else dormant++;
+    });
+    document.getElementById('agActiveCount').textContent = active;
+    document.getElementById('agIdleCount').textContent = idle;
+    document.getElementById('agDormantCount').textContent = dormant;
+
+    // Agent cards
+    const cardsHtml = AGENT_META.map(meta => {
+      const a = agents.find(x => x.agent_name === meta.name) || { total: 0, completed: 0, failed: 0, daily: [] };
+      const color = agentColor(meta.name);
+      const status = getAgentStatus(a.last_seen);
+      const share = ((a.total || 0) / totalResponses * 100).toFixed(0);
+      const successPct = a.total > 0 ? Math.round((a.completed || 0) / a.total * 100) : 0;
+      const successClass = successPct >= 100 ? 'mint' : successPct >= 80 ? 'amber' : 'red';
+
+      // Mini bar chart
+      const daily = a.daily || [0,0,0,0,0,0,0];
+      const maxDay = Math.max(...daily, 1);
+      const barsHtml = daily.map(v => {
+        const h = Math.max(2, (v / maxDay) * 32);
+        const op = v > 0 ? 0.85 : 0.15;
+        return `<div class="ag-mini-bar" style="height:${h}px;background:${color};opacity:${op}"></div>`;
+      }).join('');
+
+      const statusColor = status === 'active' ? 'var(--mint)' : status === 'idle' ? 'var(--amber)' : 'rgba(255,255,255,0.1)';
+
+      return `<div class="glass ag-card" style="border-top-color:${color}">
+        <div class="ag-card-top">
+          <span class="ag-code-badge" style="background:${color}22;color:${color}">${meta.code}</span>
+          <div class="ag-platform-row">
+            <span class="ag-platform-pill ${meta.platform}">${meta.platform}</span>
+            <span class="ag-status-dot ${status}" style="background:${statusColor}"></span>
+          </div>
+        </div>
+        <div class="ag-name">${meta.display}</div>
+        <div class="ag-role">${meta.role}</div>
+        <div class="ag-chart-label">7-Day Activity</div>
+        <div class="ag-mini-chart">${barsHtml}</div>
+        <div class="ag-stats-row">
+          <div class="ag-stat-cell">
+            <span class="ag-stat-label">Responses</span>
+            <span class="ag-stat-val" style="color:${color}">${a.total || 0}</span>
+          </div>
+          <div class="ag-stat-cell">
+            <span class="ag-stat-label">Success</span>
+            <span class="ag-stat-val ${successClass}">${successPct}%</span>
+          </div>
+          <div class="ag-stat-cell">
+            <span class="ag-stat-label">Model</span>
+            <span class="ag-stat-val muted">${truncate(a.model || '—', 8)}</span>
+          </div>
+        </div>
+        <div class="ag-load-bar"><div class="ag-load-fill" style="width:${share}%;background:${color}"></div></div>
+        <div class="ag-last-task">↳ ${truncate(a.last_task || 'No tasks yet', 38)}</div>
+        <div class="ag-last-time">${fmtRelative(a.last_seen)} ago</div>
+      </div>`;
+    }).join('');
+    document.getElementById('agCards').innerHTML = cardsHtml;
+
+    // Log entries
+    agLogEntries = (d.activity?.activity || d.activity?.recent || []).slice();
+    renderAgLog();
+    renderAgFilters(agents);
+    renderAgStats(d);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  AGENT STATISTICS — stat cards + donut chart
+  // ═════════════════════════════════════════════════════════════════════════
+
+  // Canvas colors (hex, not CSS vars — canvas can't resolve var())
+  const AGENT_CANVAS_COLORS = {
+    orchestrator: '#A78BFA',
+    analyst:      '#7DD3FC',
+    writer:       '#F472B6',
+    marketer:     '#FBBF24',
+    coder:        '#E879F9',
+  };
+
+  function renderAgStats(d) {
+    const byDay = d.activity?.activity_by_day || [];
+    const agents = d.agents || [];
+    const stats = d.stats || {};
+
+    // Tasks today — last entry in activity_by_day
+    const todayCount = byDay.length ? byDay[byDay.length - 1].total : 0;
+    document.getElementById('agStatToday').textContent = todayCount;
+    const todayBar = document.getElementById('agStatTodayBar');
+    todayBar.style.width = '100%';
+    todayBar.className = 'ag-stat-tile-fill fill-amber';
+
+    // Tasks this week — sum of all 7 entries
+    const weekTotal = byDay.reduce((s, x) => s + (x.total || 0), 0);
+    document.getElementById('agStatWeek').textContent = weekTotal;
+    const weekBar = document.getElementById('agStatWeekBar');
+    weekBar.style.width = '100%';
+    weekBar.className = 'ag-stat-tile-fill fill-cyan';
+
+    // Most active agent — highest total across agents
+    let mostActive = null;
+    let maxCount = 0;
+    agents.forEach(a => {
+      if ((a.total || 0) > maxCount) {
+        maxCount = a.total || 0;
+        mostActive = a;
+      }
+    });
+    const maEl = document.getElementById('agStatMostActive');
+    const maBar = document.getElementById('agStatMostActiveBar');
+    if (mostActive) {
+      maEl.textContent = mostActive.agent_name.charAt(0).toUpperCase() + mostActive.agent_name.slice(1);
+      maEl.style.color = agentColor(mostActive.agent_name);
+      const share = weekTotal > 0 ? (maxCount / weekTotal * 100) : 0;
+      maBar.style.width = share + '%';
+      maBar.style.background = agentColor(mostActive.agent_name);
+    } else {
+      maEl.textContent = '—';
+      maBar.style.width = '0%';
+    }
+
+    // Success rate
+    const total = stats.total || 0;
+    const completed = stats.completed || 0;
+    const successPct = total > 0 ? Math.round(completed / total * 100) : 0;
+    document.getElementById('agStatSuccess').textContent = successPct + '%';
+    const successBar = document.getElementById('agStatSuccessBar');
+    successBar.style.width = successPct + '%';
+    successBar.className = 'ag-stat-tile-fill ' + (successPct >= 90 ? 'fill-mint' : successPct >= 70 ? 'fill-amber' : 'fill-red');
+
+    // Donut chart
+    drawAgentDonut(agents);
+  }
+
+  function drawAgentDonut(agents) {
+    const canvas = document.getElementById('agDonut');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    const cx = w / 2;
+    const cy = h / 2;
+    const outerR = 52;
+    const innerR = 32;
+
+    ctx.clearRect(0, 0, w, h);
+
+    const total = agents.reduce((s, a) => s + (a.total || 0), 0);
+
+    if (total === 0) {
+      // Draw a faint placeholder circle
+      ctx.beginPath();
+      ctx.arc(cx, cy, outerR, 0, 2 * Math.PI);
+      ctx.arc(cx, cy, innerR, 0, 2 * Math.PI, true);
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      ctx.fill();
+    } else {
+      // Draw slices
+      let startAngle = -Math.PI / 2;
+      agents.forEach(a => {
+        const count = a.total || 0;
+        if (count === 0) return;
+        const sliceAngle = (count / total) * 2 * Math.PI;
+        const endAngle = startAngle + sliceAngle;
+        const color = AGENT_CANVAS_COLORS[a.agent_name?.toLowerCase()] || '#A78BFA';
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerR, startAngle, endAngle);
+        ctx.arc(cx, cy, innerR, endAngle, startAngle, true);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+
+        startAngle = endAngle;
+      });
+    }
+
+    // Center text — grand total
+    ctx.fillStyle = '#F4F4F8';
+    ctx.font = 'bold 18px "Inter Tight", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(total), cx, cy - 6);
+
+    ctx.font = '10px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#8A8A9B';
+    ctx.fillText('TOTAL', cx, cy + 10);
+
+    // Legend
+    const legendHtml = agents.map(a => {
+      const count = a.total || 0;
+      const pct = total > 0 ? Math.round(count / total * 100) : 0;
+      const color = AGENT_CANVAS_COLORS[a.agent_name?.toLowerCase()] || '#A78BFA';
+      const name = a.agent_name ? (a.agent_name.charAt(0).toUpperCase() + a.agent_name.slice(1)) : '—';
+      return `<div class="ag-legend-row">
+        <span class="ag-legend-dot" style="background:${color}"></span>
+        <span class="ag-legend-name">${name}</span>
+        <span class="ag-legend-pct">${pct}%</span>
+      </div>`;
+    }).join('');
+    document.getElementById('agDonutLegend').innerHTML = legendHtml;
+  }
+
+  function renderAgFilters(agents) {
+    const filters = ['ALL', ...AGENT_META.map(m => m.code)];
+    const html = filters.map(f => {
+      const isActive = agFilter === f;
+      return `<button class="ag-filter-btn ${isActive ? 'active' : ''}" onclick="setAgFilter('${f}')">${f}</button>`;
+    }).join('');
+    document.getElementById('agFilters').innerHTML = html;
+  }
+
+  function setAgFilter(f) {
+    agFilter = f;
+    renderAgLog();
+    // Re-render filter buttons to update active state
+    const agents = D ? (D.agents || []) : [];
+    renderAgFilters(agents);
+  }
+
+  function renderAgLog() {
+    let entries = agLogEntries;
+    if (agFilter !== 'ALL') {
+      const meta = AGENT_META.find(m => m.code === agFilter);
+      if (meta) {
+        entries = entries.filter(e => e.agent_name === meta.name);
+      }
+    }
+
+    document.getElementById('agLogCount').textContent = `${entries.length} entries`;
+
+    if (!entries.length) {
+      document.getElementById('agLogBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No entries</td></tr>';
+      return;
+    }
+
+    const html = entries.map(e => {
+      const color = agentColor(e.agent_name);
+      const status = (e.status || '').toLowerCase();
+      const statusClass = status === 'failed' ? 'fail' : 'done';
+      const statusLabel = status === 'failed' ? 'Failed' : 'Done';
+      return `<tr>
+        <td style="color:var(--muted)">${fmtRelative(e.created_at)}</td>
+        <td style="color:${color};font-weight:600">${(e.agent_name || '—').toUpperCase()}</td>
+        <td style="color:var(--text);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${truncate(e.task_description || '—', 60)}</td>
+        <td style="color:var(--muted)">${truncate(e.model_used || '—', 12)}</td>
+        <td><span class="ag-log-status ${statusClass}">${statusLabel}</span></td>
+      </tr>`;
+    }).join('');
+    document.getElementById('agLogBody').innerHTML = html;
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  DATA CONNECTION — SSE primary, polling fallback
+  // ═════════════════════════════════════════════════════════════════════════
+  function connectSSE() {
+    if (sse) sse.close();
+    sse = new EventSource('/events');
+    sse.onopen = function() {
+      sseConnected = true;
+      document.getElementById('liveDot')?.classList.remove('disconnected');
+    };
+    sse.onmessage = function(e) {
+      try {
+        let data = JSON.parse(e.data);
+        render(data);
+      } catch (err) {}
+    };
+    sse.onerror = function() {
+      sseConnected = false;
+      document.getElementById('liveDot')?.classList.add('disconnected');
+      sse.close();
+      // Start polling if not already
+      if (!pollTimer) startPolling();
+      // Try reconnecting SSE after 5s
+      setTimeout(connectSSE, 5000);
+    };
+  }
+
+  function startPolling() {
+    if (pollTimer) return;
+    pollTimer = setInterval(async () => {
+      try {
+        let resp = await fetch('/api/snapshot');
+        let data = await resp.json();
+        render(data);
+        // If SSE is back, stop polling
+        if (sseConnected) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+      } catch (e) {}
+    }, 8000);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  ANIMATION LOOPS — independent timers
+  // ═════════════════════════════════════════════════════════════════════════
+
+  // Radar sweep — JS requestAnimationFrame, rotates around (70,70)
+  const radarSweepGroup = document.getElementById('radarSweep');
+  let sweepAngle = 0;
+  function animateRadarSweep() {
+    sweepAngle = (sweepAngle + 90 / 60) % 360; // 90deg/sec = 4s per revolution
+    radarSweepGroup.setAttribute('transform', `rotate(${sweepAngle.toFixed(2)} 70 70)`);
+    requestAnimationFrame(animateRadarSweep);
+  }
+  requestAnimationFrame(animateRadarSweep);
+
+  // Directive cycle — every 2.6s
+  setInterval(tickDirective, 2600);
+
+  // Context window cycle — every 2.4s
+  setInterval(tickContextWindow, 2400);
+
+  // Sparkline redraw — every 900ms
+  setInterval(() => {
+    if (D) drawSparkline(D.activity?.activity_by_day);
+  }, 900);
+
+  // Activity feed refresh — every 2.2s
+  setInterval(tickFeed, 2200);
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  INIT — fetch first snapshot immediately, then connect SSE
+  // ═════════════════════════════════════════════════════════════════════════
+  (async () => {
+    try {
+      let resp = await fetch('/api/snapshot');
+      let data = await resp.json();
+      render(data);
+    } catch (e) {}
+    connectSSE();
+  })();
+</script>
+</body>
+</html>

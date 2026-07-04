@@ -3533,6 +3533,19 @@ body {
     // Tasks tab stats (cron data from SSE)
     if (tkTasks.length >= 0) tkRenderStats();
 
+    // Tasks tab board — sync from SSE if changed and not actively dragging
+    if (d.board && d.board.tasks && !tkDraggedId) {
+      const newTasks = d.board.tasks;
+      // Only re-render if task data actually changed (compare JSON)
+      const newSig = JSON.stringify(newTasks.map(t => `${t.id}|${t.status}|${t.updated_at}`));
+      const oldSig = JSON.stringify(tkTasks.map(t => `${t.id}|${t.status}|${t.updated_at}`));
+      if (newSig !== oldSig) {
+        tkTasks = newTasks;
+        tkRenderBoard();
+        tkSetupDragDrop();
+      }
+    }
+
     // Schedule tab
     renderScheduleTab(d);
   }

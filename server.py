@@ -960,6 +960,7 @@ def build_snapshot():
         "cron": cron_jobs(),
         "crons": cron_jobs().get("jobs", []),
         "agents": activity.get("agents", []),
+        "board": board_list(),
         "stats": {
             "total": act_stats.get("total", 0),
             "completed": act_stats.get("completed", 0),

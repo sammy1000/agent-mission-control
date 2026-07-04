@@ -3858,10 +3858,14 @@ body {
     // Clear
     Object.values(cols).forEach(c => c.innerHTML = '');
 
-    // Sort by created_at desc
-    const sorted = [...tkTasks].sort((a, b) =>
-      (b.created_at || '').localeCompare(a.created_at || '')
-    );
+    // Sort by priority (high → medium → low), then by created_at desc as tiebreaker
+    const priOrder = { high: 0, medium: 1, low: 2 };
+    const sorted = [...tkTasks].sort((a, b) => {
+      const pa = priOrder[a.priority || 'medium'] ?? 1;
+      const pb = priOrder[b.priority || 'medium'] ?? 1;
+      if (pa !== pb) return pa - pb;
+      return (b.created_at || '').localeCompare(a.created_at || '');
+    });
 
     sorted.forEach(t => {
       const status = t.status || 'pending';

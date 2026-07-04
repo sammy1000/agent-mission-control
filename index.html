@@ -3890,7 +3890,7 @@ body {
         </div>
       `;
 
-      // Drag events
+      // Drag events (desktop)
       card.addEventListener('dragstart', (e) => {
         tkDraggedId = t.id;
         card.classList.add('dragging');
@@ -3902,6 +3902,36 @@ body {
         // Remove all drag-over highlights
         document.querySelectorAll('.tk-col-body').forEach(b => b.classList.remove('drag-over'));
       });
+
+      // Touch events (iOS/Android) — replicate drag-and-drop
+      card.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.tk-task-del')) return; // don't interfere with delete button
+        tkDraggedId = t.id;
+        card.classList.add('dragging');
+      }, { passive: true });
+      card.addEventListener('touchmove', (e) => {
+        if (!tkDraggedId) return;
+        e.preventDefault(); // prevent scrolling
+        // Find which column is under the finger
+        const touch = e.touches[0];
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        document.querySelectorAll('.tk-col-body').forEach(b => b.classList.remove('drag-over'));
+        const col = el?.closest('.tk-col-body');
+        if (col) col.classList.add('drag-over');
+      }, { passive: false });
+      card.addEventListener('touchend', (e) => {
+        if (!tkDraggedId) return;
+        card.classList.remove('dragging');
+        // Find which column the finger is over
+        const touch = e.changedTouches[0];
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        const col = el?.closest('.tk-col-body');
+        document.querySelectorAll('.tk-col-body').forEach(b => b.classList.remove('drag-over'));
+        if (col && col.dataset.status) {
+          tkUpdateTask(tkDraggedId, { status: col.dataset.status });
+        }
+        tkDraggedId = null;
+      }, { passive: true });
 
       cols[status].appendChild(card);
     });

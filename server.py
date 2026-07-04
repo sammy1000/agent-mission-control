@@ -45,7 +45,7 @@ BOARD_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "board.db")
 # Sami's timezone: UTC+3 — all dashboard time display uses this
 TZ_SAMI = timezone(timedelta(hours=3))
 
-HOST = "127.0.0.1"
+HOST = "0.0.0.0"
 PORT = 51764
 SSE_INTERVAL = 5  # seconds between SSE pushes
 
